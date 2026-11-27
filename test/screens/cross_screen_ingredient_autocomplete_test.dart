@@ -46,6 +46,7 @@ class _RecordingIngredientRepository implements IngredientRepository {
           (name) => IngredientSearchResult(
             id: 'i-${name.hashCode}',
             name: name,
+            matchedName: name,
             isOwn: true,
           ),
         )

@@ -128,7 +128,7 @@ class _DrinkTile extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            DrinkGlyph.icon(DrinkHelpers.iconFor(drink.name), color: color),
+            DrinkGlyph.icon(DrinkHelpers.iconFor(drink), color: color),
             AppConstants.gap6,
             Text(
               drink.name,

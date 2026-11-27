@@ -93,6 +93,15 @@ void main() {
       expect(result.first.name, 'Eis Kaffee');
     });
 
+    test('ranks a drink by its best text: a synonym can win', () {
+      final drinks = [
+        makeDrink('1', 'Eiscola'),
+        const Drink(id: '2', name: 'Coca-Cola', synonyms: ['Cola']),
+      ];
+      final result = DrinkHelpers.search('cola', drinks);
+      expect(result.first.name, 'Coca-Cola');
+    });
+
     test('case insensitive', () {
       final result = DrinkHelpers.search('WASSER', allDrinks);
       expect(result.length, 1);
@@ -174,7 +183,7 @@ void main() {
   });
 
   group('drinks screen helpers', () {
-    test('iconFor maps names by keyword in order', () {
+    test('iconForName maps names by keyword in order', () {
       final cases = {
         'Wasser': DrinkIcon.glass,
         'Mineralwasser': DrinkIcon.glass,
@@ -197,14 +206,36 @@ void main() {
         'Alkoholfreies Bier': DrinkIcon.can,
       };
       cases.forEach(
-        (name, icon) => expect(DrinkHelpers.iconFor(name), icon, reason: name),
+        (name, icon) =>
+            expect(DrinkHelpers.iconForName(name), icon, reason: name),
       );
     });
 
-    test('iconFor ignores case and falls back to glass', () {
-      expect(DrinkHelpers.iconFor('KAFFEE'), DrinkIcon.cup);
-      expect(DrinkHelpers.iconFor('Xyz'), DrinkIcon.glass);
-      expect(DrinkHelpers.iconFor(''), DrinkIcon.glass);
+    test('iconForName ignores case and falls back to glass', () {
+      expect(DrinkHelpers.iconForName('KAFFEE'), DrinkIcon.cup);
+      expect(DrinkHelpers.iconForName('Xyz'), DrinkIcon.glass);
+      expect(DrinkHelpers.iconForName(''), DrinkIcon.glass);
+    });
+
+    test('iconFor takes the category icon, else the name keywords', () {
+      expect(
+        DrinkHelpers.iconFor(makeDrink('a', 'Kaffee')),
+        DrinkIcon.cup,
+        reason: 'no category icon: name keywords',
+      );
+      expect(
+        DrinkHelpers.iconFor(
+          const Drink(id: 'a', name: 'Kaffee', categoryIcon: DrinkIcon.glass),
+        ),
+        DrinkIcon.glass,
+      );
+    });
+
+    test('search finds a drink by a synonym, ignoring case', () {
+      const kracherl = Drink(id: 'k', name: 'Limonade', synonyms: ['Kracherl']);
+      expect(DrinkHelpers.search('kracher', [wasser, kracherl]), [kracherl]);
+      expect(DrinkHelpers.search('KRACHERL', [wasser, kracherl]), [kracherl]);
+      expect(DrinkHelpers.search('limo', [wasser, kracherl]), [kracherl]);
     });
 
     test('glassFills: 1000 drunk gives four full glasses', () {

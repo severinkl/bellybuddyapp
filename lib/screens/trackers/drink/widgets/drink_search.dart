@@ -51,7 +51,12 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
   bool _shouldShowCreateOption(List<Drink> suggestions) {
     final query = _controller.text.trim();
     if (query.isEmpty) return false;
-    return !suggestions.any((d) => d.name.toLowerCase() == query.toLowerCase());
+    final lower = query.toLowerCase();
+    return !suggestions.any(
+      (d) =>
+          d.name.toLowerCase() == lower ||
+          d.synonyms.any((s) => s.toLowerCase() == lower),
+    );
   }
 
   void _selectDrink(Drink drink) {

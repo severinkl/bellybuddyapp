@@ -7,8 +7,16 @@ import 'package:belly_buddy/widgets/common/ingredient_search.dart';
 import '../../helpers/riverpod_helpers.dart';
 import '../../helpers/semantics_checks.dart';
 
-IngredientSearchResult _result(String name, {bool isOwn = false}) =>
-    IngredientSearchResult(id: 'id-$name', name: name, isOwn: isOwn);
+IngredientSearchResult _result(
+  String name, {
+  String? matchedName,
+  bool isOwn = false,
+}) => IngredientSearchResult(
+  id: 'id-$name',
+  name: name,
+  matchedName: matchedName ?? name,
+  isOwn: isOwn,
+);
 
 /// Hosts an [IngredientSearch] whose suggestions answer each search with
 /// the [catalog] names containing the query (in catalog order), like the
@@ -19,6 +27,7 @@ class _Host extends StatefulWidget {
     required this.added,
     this.topSpace = 0,
     this.own = const {},
+    this.synonyms = const {},
   });
 
   final List<String> catalog;
@@ -26,6 +35,9 @@ class _Host extends StatefulWidget {
   /// The [catalog] names that are the user's own ingredients.
   final Set<String> own;
   final List<String> added;
+
+  /// Other names of [catalog] names (matched name -> name).
+  final Map<String, String> synonyms;
 
   /// Room above the search, so it sits low on the screen.
   final double topSpace;
@@ -46,6 +58,9 @@ class _HostState extends State<_Host> {
               for (final name in widget.catalog)
                 if (name.toLowerCase().contains(q))
                   _result(name, isOwn: widget.own.contains(name)),
+              for (final e in widget.synonyms.entries)
+                if (e.key.toLowerCase().contains(q))
+                  _result(e.value, matchedName: e.key),
             ];
     });
   }
@@ -92,9 +107,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> pump(WidgetTester tester, {double topSpace = 0}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    double topSpace = 0,
+    Map<String, String> synonyms = const {},
+  }) async {
     await tester.pumpWithProviders(
-      _Host(catalog: catalog, added: added, topSpace: topSpace),
+      _Host(
+        catalog: catalog,
+        added: added,
+        topSpace: topSpace,
+        synonyms: synonyms,
+      ),
     );
     await tester.tap(find.text('+ Hinzufügen'));
     await tester.pumpAndSettle();
@@ -118,6 +142,55 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(added, ['Hafer']);
+  });
+
+  testWidgets('ranks by matchedName and keeps the picked word', (tester) async {
+    await pump(tester, synonyms: const {'Paradeiser': 'Tomate'});
+    await type(tester, 'parad');
+
+    final row = find.widgetWithText(ListTile, 'Paradeiser');
+    expect(row, findsOneWidget);
+    expect(
+      find.descendant(of: row, matching: find.text('= Tomate')),
+      findsOneWidget,
+    );
+
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+
+    // The chip keeps the word the user picked.
+    expect(added, ['Paradeiser']);
+    expect(find.widgetWithText(Chip, 'Paradeiser'), findsOneWidget);
+  });
+
+  testWidgets('no second line when the matched name is the name', (
+    tester,
+  ) async {
+    await pump(tester, synonyms: const {'haferkleie ': 'Haferkleie'});
+    await type(tester, 'haferk');
+
+    expect(find.text('Haferkleie'), findsWidgets);
+    expect(find.textContaining('='), findsNothing);
+  });
+
+  testWidgets('the row reads „Paradeiser, auch Tomate"', (tester) async {
+    final handle = tester.ensureSemantics();
+    await pump(tester, synonyms: const {'Paradeiser': 'Tomate'});
+    await type(tester, 'parad');
+
+    expect(find.bySemanticsLabel('Paradeiser, auch Tomate'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+    handle.dispose();
+  });
+
+  testWidgets('a food added once is not offered under another word', (
+    tester,
+  ) async {
+    added.add('Tomate');
+    await pump(tester, synonyms: const {'Paradeiser': 'Tomate'});
+    await type(tester, 'Para');
+
+    expect(find.text('Paradeiser'), findsNothing);
   });
 
   testWidgets('a short name like „Ei" can be added too', (tester) async {

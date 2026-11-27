@@ -4,9 +4,10 @@ import 'package:intl/intl.dart';
 
 import '../config/constants.dart';
 import '../models/drink.dart';
+import '../models/drink_icon.dart';
 import 'date_format_utils.dart';
 
-enum DrinkIcon { glass, hotCup, cup, bottle, carton, can }
+export '../models/drink_icon.dart';
 
 enum DrinkVessel {
   glass('Glas', 250),
@@ -98,9 +99,13 @@ abstract final class DrinkHelpers {
     return quick;
   }
 
+  /// The icon of a drink: its category's, else by its name.
+  static DrinkIcon iconFor(Drink drink) =>
+      drink.categoryIcon ?? iconForName(drink.name);
+
   /// The icon for a drink name: the first keyword group (can, bottle, cup,
   /// hot cup, carton) with a keyword in the lower-cased name, else glass.
-  static DrinkIcon iconFor(String name) {
+  static DrinkIcon iconForName(String name) {
     final n = name.toLowerCase();
     bool has(List<String> keywords) => keywords.any(n.contains);
     if (has(_canKeywords)) return DrinkIcon.can;
@@ -198,31 +203,30 @@ abstract final class DrinkHelpers {
         .split(' ')
         .where((w) => w.isNotEmpty)
         .toList();
-    final filtered =
-        allDrinks.where((d) {
-          final name = d.name.toLowerCase();
-          return words.every((w) => name.contains(w));
-        }).toList()..sort((a, b) {
-          final firstWord = words.first;
-          final aName = a.name.toLowerCase();
-          final bName = b.name.toLowerCase();
+    final firstWord = words.first;
+    // 0 exact, 1 starts with, 2 word start, 3 contains; null: no match.
+    int? score(String text) {
+      final lower = text.toLowerCase();
+      if (!words.every(lower.contains)) return null;
+      if (lower == firstWord) return 0;
+      if (lower.startsWith(firstWord)) return 1;
+      if (lower.split(' ').any((w) => w.startsWith(firstWord))) return 2;
+      return 3;
+    }
 
-          final aStarts = aName.startsWith(firstWord);
-          final bStarts = bName.startsWith(firstWord);
-          if (aStarts && !bStarts) return -1;
-          if (!aStarts && bStarts) return 1;
-
-          final aWordStarts = aName
-              .split(' ')
-              .any((w) => w.startsWith(firstWord));
-          final bWordStarts = bName
-              .split(' ')
-              .any((w) => w.startsWith(firstWord));
-          if (aWordStarts && !bWordStarts) return -1;
-          if (!aWordStarts && bWordStarts) return 1;
-
-          return a.name.compareTo(b.name);
-        });
+    // A drink ranks by its best-scoring text: its name or any synonym.
+    final hits = <(Drink, int)>[];
+    for (final d in allDrinks) {
+      final scores = [
+        for (final t in [d.name, ...d.synonyms]) ?score(t),
+      ];
+      if (scores.isNotEmpty) hits.add((d, scores.reduce(math.min)));
+    }
+    hits.sort((a, b) {
+      final byScore = a.$2.compareTo(b.$2);
+      return byScore != 0 ? byScore : a.$1.name.compareTo(b.$1.name);
+    });
+    final filtered = [for (final h in hits) h.$1];
     return filtered.take(searchResultLimit).toList();
   }
 

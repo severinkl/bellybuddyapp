@@ -79,7 +79,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
       if (exact != null) {
         // Not during this build: adding updates the host.
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _isAdding) _add(exact.name);
+          if (mounted && _isAdding) _add(exact.matchedName);
         });
         return;
       }
@@ -105,6 +105,8 @@ class _IngredientSearchState extends State<IngredientSearch> {
     widget.onSearch(value);
   }
 
+  static String _norm(String s) => s.trim().toLowerCase();
+
   String get _typed => _controller.text.trim();
 
   /// The suggestion named exactly like the typed text (ignoring case).
@@ -112,7 +114,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
     final typed = _typed.toLowerCase();
     if (typed.isEmpty) return null;
     for (final s in widget.suggestions) {
-      if (s.name.toLowerCase() == typed) return s;
+      if (s.matchedName.trim().toLowerCase() == typed) return s;
     }
     return null;
   }
@@ -136,7 +138,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
   void _onSubmitted(String value) {
     final exact = _exactMatch;
     if (exact != null) {
-      _add(exact.name);
+      _add(exact.matchedName);
     } else if (_typed.isEmpty) {
       _close();
     } else {
@@ -180,8 +182,12 @@ class _IngredientSearchState extends State<IngredientSearch> {
 
   @override
   Widget build(BuildContext context) {
+    // One food once: a suggestion is hidden when its name or the word it
+    // was found by is added already (ignoring case and outer spaces).
+    final added = {for (final i in widget.ingredients) _norm(i)};
     final filteredSuggestions = widget.suggestions
-        .where((s) => !widget.ingredients.contains(s.name))
+        .where((s) => !added.contains(_norm(s.name)))
+        .where((s) => !added.contains(_norm(s.matchedName)))
         .take(_maxSuggestions)
         .toList();
     final typed = _typed;
@@ -317,9 +323,27 @@ class _IngredientSearchState extends State<IngredientSearch> {
                   children: [
                     for (final s in filteredSuggestions)
                       ListTile(
-                        title: Text(s.name),
+                        title: s.showsCanonicalName
+                            // One label: „Paradeiser, auch Tomate".
+                            ? Semantics(
+                                label: '${s.matchedName}, auch ${s.name}',
+                                excludeSemantics: true,
+                                child: Text(s.matchedName),
+                              )
+                            : Text(s.matchedName),
+                        subtitle: s.showsCanonicalName
+                            ? ExcludeSemantics(
+                                child: Text(
+                                  '= ${s.name}',
+                                  style: const TextStyle(
+                                    fontSize: AppTheme.fontSizeCaption,
+                                    color: AppTheme.mutedForeground,
+                                  ),
+                                ),
+                              )
+                            : null,
                         dense: true,
-                        onTap: () => _add(s.name),
+                        onTap: () => _add(s.matchedName),
                         trailing: s.isOwn
                             ? IconButton(
                                 tooltip: 'Zutat löschen',

@@ -501,6 +501,26 @@ void main() {
       await verifyUpdate(tester, amounts: const ['2 EL', null]);
     });
 
+    testWidgets('an ingredient added already is not added again', (
+      tester,
+    ) async {
+      await tall(tester);
+      final recipe = testUserRecipe(
+        id: 'rec-1',
+        ingredients: const ['Reis'],
+        ingredientAmounts: const ['200 g'],
+      );
+      await pumpEditor(tester, recipeId: 'rec-1', recipes: [recipe]);
+
+      tester
+          .widget<IngredientSearch>(find.byType(IngredientSearch))
+          .onAdd(' reis ');
+      await tester.pump();
+
+      expect(find.widgetWithText(Chip, 'Reis'), findsOneWidget);
+      expect(find.byType(Chip), findsOneWidget);
+    });
+
     testWidgets('a re-added ingredient comes back without its amount', (
       tester,
     ) async {
