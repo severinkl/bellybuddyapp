@@ -4,11 +4,15 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/ingredient_suggestion_group.dart';
+import '../../../providers/plus_provider.dart';
+import '../../../services/plus/plus_copy.dart';
+import '../../../widgets/common/plus_locked_card.dart';
 import 'discover_section.dart';
 
 /// The newest [shown] suggestion groups (new first, then by their latest
-/// meal) and „Alle ›"; none: a line and no link.
-class DiscoverAlternativesSection extends StatelessWidget {
+/// meal) and „Alle ›"; none: a line and no link — while Belly Buddy Plus
+/// is locked, the Plus note and a link to `/plus` instead.
+class DiscoverAlternativesSection extends ConsumerWidget {
   const DiscoverAlternativesSection({
     super.key,
     required this.groups,
@@ -44,7 +48,8 @@ class DiscoverAlternativesSection extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plusLocked = ref.watch(plusAccessProvider) == PlusAccess.locked;
     final list = groups.value;
     final hasAny = list != null && list.isNotEmpty;
     return DiscoverSection(
@@ -54,6 +59,10 @@ class DiscoverAlternativesSection extends StatelessWidget {
       actions: [if (hasAny) DiscoverAllLink(onTap: onOpen)],
       child: switch (list) {
         null => DiscoverNote.pending(groups, 'Alternativen'),
+        [] when plusLocked => const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [DiscoverNote(PlusCopy.alternativesNote), PlusLink()],
+        ),
         [] => const DiscoverNote(
           'Noch keine Alternativen – sie entstehen nach deinen Mahlzeiten.',
         ),

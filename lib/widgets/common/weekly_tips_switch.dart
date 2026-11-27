@@ -1,13 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
+import '../../providers/plus_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../router/route_names.dart';
+import '../../services/plus/plus_copy.dart';
 import '../../utils/logger.dart';
 
 /// The „Wöchentliche Tipps" opt-in, with what it sends. It controls whether
 /// the tips are made, not whether a push arrives. Shows nothing while the
-/// profile is unknown.
+/// profile is unknown. While Belly Buddy Plus is locked it shows the stored
+/// value with „Mit Belly Buddy Plus", and a tap opens `/plus` without
+/// changing it.
 class WeeklyTipsSwitch extends ConsumerStatefulWidget {
   const WeeklyTipsSwitch({super.key});
 
@@ -49,17 +55,20 @@ class _WeeklyTipsSwitchState extends ConsumerState<WeeklyTipsSwitch> {
   Widget build(BuildContext context) {
     final enabled = ref.watch(weeklyTipsEnabledProvider);
     if (enabled == null) return const SizedBox.shrink();
+    final plusLocked = ref.watch(plusAccessProvider) == PlusAccess.locked;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SwitchListTile(
           key: WeeklyTipsSwitch.switchKey,
           title: const Text(WeeklyTipsSwitch.title),
-          subtitle: const Text(WeeklyTipsSwitch.subline),
+          subtitle: Text(
+            plusLocked ? PlusCopy.weeklyTipsSubline : WeeklyTipsSwitch.subline,
+          ),
           value: enabled,
           activeThumbColor: AppTheme.primary,
           contentPadding: EdgeInsets.zero,
-          onChanged: _set,
+          onChanged: plusLocked ? (_) => context.push(RoutePaths.plus) : _set,
         ),
         const Text(
           WeeklyTipsSwitch.sentence,

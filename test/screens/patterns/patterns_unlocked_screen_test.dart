@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/screens/patterns/patterns_unlocked_screen.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_actions.dart';
@@ -22,6 +24,7 @@ Future<GoRouter> _pump(
   bool reducedMotion = false,
   Size size = const Size(375, 667),
   bool alone = false,
+  List<Override> plus = const [],
 }) async {
   tester.view
     ..physicalSize = size
@@ -47,6 +50,7 @@ Future<GoRouter> _pump(
   addTearDown(router.dispose);
   await tester.pumpWidget(
     ProviderScope(
+      overrides: plus,
       child: MediaQuery(
         data: MediaQueryData(
           size: size,
@@ -79,6 +83,50 @@ void main() {
     expect(find.text(PatternsUnlockedScreen.line), findsOneWidget);
     expect(find.text('Muster ansehen'), findsOneWidget);
     expect(find.byType(AnimatedBuddy), findsOneWidget);
+  });
+
+  group('Belly Buddy Plus', () {
+    const lockedLine =
+        '7 Tage und 3× Bauchgefühl: Ich hab mir deine Einträge angeschaut. '
+        'Deine ersten Muster sind da.';
+    const todayLine =
+        '7 Tage und 3× Bauchgefühl: Ich hab mir deine Einträge angeschaut. '
+        'Deine Muster-Seite ist jetzt frei.';
+
+    testWidgets(
+      'locked: the line says the Muster are there, button unchanged',
+      (tester) async {
+        final router = await _pump(
+          tester,
+          plus: [plusAccessProvider.overrideWithValue(PlusAccess.locked)],
+        );
+        expect(find.text(lockedLine), findsOneWidget);
+        expect(find.text(todayLine), findsNothing);
+        expect(find.text('Muster ansehen'), findsOneWidget);
+
+        await tester.tap(find.byKey(PatternsUnlockedScreen.openKey));
+        await tester.pumpAndSettle();
+        expect(_location(router), '/patterns');
+      },
+    );
+
+    testWidgets('open: today\'s line', (tester) async {
+      await _pump(
+        tester,
+        plus: [plusAccessProvider.overrideWithValue(PlusAccess.open)],
+      );
+      expect(find.text(todayLine), findsOneWidget);
+      expect(find.text(lockedLine), findsNothing);
+    });
+
+    testWidgets('switch off: today\'s line', (tester) async {
+      await _pump(
+        tester,
+        plus: [paywallEnabledProvider.overrideWithValue(false)],
+      );
+      expect(find.text(todayLine), findsOneWidget);
+      expect(find.text(lockedLine), findsNothing);
+    });
   });
 
   testWidgets('„Muster ansehen" replaces it with Muster', (tester) async {

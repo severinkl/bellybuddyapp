@@ -55,6 +55,33 @@ abstract final class PlusCopy {
   static const restoreFailed =
       'Wiederherstellen hat nicht geklappt. Versuch es später nochmal.';
 
+  // Locks (spec 4.4).
+
+  /// The button of every [PlusLockedCard] and the Alternativen link.
+  static const openPlus = 'Belly Buddy Plus ansehen';
+
+  static const patternsTitle = 'Deine Muster sind da';
+  static const patternsLine =
+      'Mit Belly Buddy Plus siehst du, was an guten und schwierigen Tagen '
+      'auffällig oft dabei war.';
+
+  /// „Muster frei!" (day 7) while Plus is locked.
+  static const patternsUnlockedLine =
+      '7 Tage und 3× Bauchgefühl: Ich hab mir deine Einträge angeschaut. '
+      'Deine ersten Muster sind da.';
+
+  static const tipsTitle = 'Jeden Montag neue Tipps';
+  static const tipsLine =
+      'Mit Belly Buddy Plus schaut sich Belly Buddy jede Woche deine '
+      'Einträge an.';
+
+  /// The „Wöchentliche Tipps" switch's subline while Plus is locked.
+  static const weeklyTipsSubline = 'Mit Belly Buddy Plus';
+
+  /// Alternativen with none received while Plus is locked.
+  static const alternativesNote =
+      'Alternativen zu auffälligen Zutaten gibt es mit Belly Buddy Plus.';
+
   static const restore = 'Käufe wiederherstellen';
   static const terms = 'Nutzungsbedingungen';
   static const privacy = 'Datenschutz';

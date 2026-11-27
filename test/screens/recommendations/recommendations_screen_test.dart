@@ -13,6 +13,7 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/recipe_collection_provider.dart';
 import 'package:belly_buddy/providers/recommendation_index_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
@@ -25,6 +26,7 @@ import 'package:belly_buddy/screens/recommendations/widgets/tip_recipe_link.dart
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 import 'package:belly_buddy/widgets/common/bb_card.dart';
+import 'package:belly_buddy/widgets/common/plus_locked_card.dart';
 
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
@@ -899,6 +901,99 @@ void main() {
       );
       expect(find.text('Empfehlungen'), findsNothing);
     });
+  });
+
+  group('Belly Buddy Plus', () {
+    const title = 'Jeden Montag neue Tipps';
+    const line =
+        'Mit Belly Buddy Plus schaut sich Belly Buddy jede Woche deine '
+        'Einträge an.';
+    final locked = plusAccessProvider.overrideWithValue(PlusAccess.locked);
+    final open = plusAccessProvider.overrideWithValue(PlusAccess.open);
+    final switchOff = paywallEnabledProvider.overrideWithValue(false);
+
+    Future<GoRouter> pumpRouted(
+      WidgetTester tester,
+      List<Recommendation> recs,
+      Override plus,
+    ) async {
+      final router = GoRouter(
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const RecommendationsScreen()),
+          GoRoute(
+            path: RoutePaths.plus,
+            builder: (_, _) => const Scaffold(body: Text('page:/plus')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [..._overridesFor(recs), plus],
+          child: germanRouterApp(router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return router;
+    }
+
+    Future<void> scrollToCard(WidgetTester tester) async {
+      await tester.ensureVisible(find.byKey(PlusLockedCard.openKey));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('locked with sets: the sets, feedback, and the card below', (
+      tester,
+    ) async {
+      await pumpRouted(tester, [_rec('1', summary: 'Mein Tipp')], locked);
+
+      expect(find.text('Mein Tipp'), findsOneWidget);
+      expect(find.text('War dieser Tipp hilfreich?'), findsOneWidget);
+      await scrollToCard(tester);
+      expect(find.text(title), findsOneWidget);
+      expect(find.text(line), findsOneWidget);
+
+      await tester.tap(find.byKey(PlusLockedCard.openKey));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/plus'), findsOneWidget);
+    });
+
+    testWidgets('locked and empty: the card instead of „Noch keine Tipps"', (
+      tester,
+    ) async {
+      await pumpRouted(tester, const [], locked);
+
+      expect(find.byType(PlusLockedCard), findsOneWidget);
+      expect(find.text(title), findsOneWidget);
+      expect(find.text(line), findsOneWidget);
+      expect(find.textContaining('Noch keine Tipps'), findsNothing);
+
+      await tester.tap(find.byKey(PlusLockedCard.openKey));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/plus'), findsOneWidget);
+    });
+
+    for (final (name, plus) in [('open', open), ('switch off', switchOff)]) {
+      testWidgets('$name with sets: no card', (tester) async {
+        await pumpRouted(tester, [_rec('1', summary: 'Mein Tipp')], plus);
+
+        expect(find.text('Mein Tipp'), findsOneWidget);
+        await tester.drag(find.byType(ListView), const Offset(0, -2000));
+        await tester.pumpAndSettle();
+        expect(find.byType(PlusLockedCard, skipOffstage: false), findsNothing);
+      });
+
+      testWidgets('$name and empty: today\'s empty state', (tester) async {
+        await pumpRouted(tester, const [], plus);
+
+        expect(find.textContaining('Noch keine Tipps'), findsOneWidget);
+        expect(
+          find.byKey(RecommendationsScreen.emptyStateRefreshKey),
+          findsOneWidget,
+        );
+        expect(find.byType(PlusLockedCard), findsNothing);
+      });
+    }
   });
 
   group('a letter, a focus and a recipe link (core #12)', () {

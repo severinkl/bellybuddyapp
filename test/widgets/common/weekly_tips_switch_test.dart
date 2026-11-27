@@ -2,14 +2,19 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
+import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 
+import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
@@ -28,18 +33,37 @@ class _SlowRepo extends FakeProfileRepository {
 void main() {
   late FakeProfileRepository repo;
 
-  Future<void> pump(WidgetTester tester, {FakeProfileRepository? using}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    FakeProfileRepository? using,
+    List<Override> plus = const [],
+    bool weeklyTips = false,
+  }) async {
     repo = using ?? FakeProfileRepository();
-    final profile = testUserProfile();
+    final profile = testUserProfile().copyWith(weeklyTipsEnabled: weeklyTips);
     repo.seedProfile(profile);
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const Scaffold(body: WeeklyTipsSwitch()),
+        ),
+        GoRoute(
+          path: RoutePaths.plus,
+          builder: (_, _) => const Scaffold(body: Text('page:/plus')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           profileRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue(testUserId),
           profileProviderSeededWith(profile),
+          ...plus,
         ],
-        child: const MaterialApp(home: Scaffold(body: WeeklyTipsSwitch())),
+        child: germanRouterApp(router),
       ),
     );
     await tester.pump();
@@ -116,5 +140,49 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(slow.weeklyTipsWrites, [true]);
+  });
+
+  group('Belly Buddy Plus', () {
+    final locked = [plusAccessProvider.overrideWithValue(PlusAccess.locked)];
+    final open = [plusAccessProvider.overrideWithValue(PlusAccess.open)];
+    final switchOff = [paywallEnabledProvider.overrideWithValue(false)];
+
+    for (final stored in [false, true]) {
+      testWidgets('locked, stored $stored: the Plus subline, the stored value; '
+          'a tap opens /plus and saves nothing', (tester) async {
+        await pump(tester, plus: locked, weeklyTips: stored);
+
+        expect(find.text('Wöchentliche Tipps'), findsOneWidget);
+        expect(find.text('Mit Belly Buddy Plus'), findsOneWidget);
+        expect(find.text('Jeden Montag 2–3 Tipps'), findsNothing);
+        expect(find.text(WeeklyTipsSwitch.sentence), findsOneWidget);
+        expect(isOn(tester), stored);
+
+        await tester.tap(find.byKey(WeeklyTipsSwitch.switchKey));
+        await tester.pumpAndSettle();
+
+        expect(find.text('page:/plus'), findsOneWidget);
+        expect(repo.weeklyTipsWrites, isEmpty);
+      });
+    }
+
+    for (final (name, overrides) in [
+      ('open', open),
+      ('switch off', switchOff),
+    ]) {
+      testWidgets('$name: today\'s subline, a tap saves', (tester) async {
+        await pump(tester, plus: overrides);
+
+        expect(find.text('Jeden Montag 2–3 Tipps'), findsOneWidget);
+        expect(find.text('Mit Belly Buddy Plus'), findsNothing);
+
+        await tester.tap(find.byKey(WeeklyTipsSwitch.switchKey));
+        await tester.pumpAndSettle();
+
+        expect(find.text('page:/plus'), findsNothing);
+        expect(repo.weeklyTipsWrites, [true]);
+        expect(isOn(tester), isTrue);
+      });
+    }
   });
 }
