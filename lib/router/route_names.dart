@@ -37,6 +37,7 @@ class RouteNames {
   static const String recipeEdit = 'recipe_edit';
   static const String collectionRecipe = 'collection-recipe';
   static const String collectionRecipeAdapt = 'collection-recipe-adapt';
+  static const String plus = 'plus';
   static const String upgradeRequired = 'upgrade-required';
   static const String healthConsent = 'health-consent';
   static const String buddyOnboarding = 'buddy-onboarding';
@@ -91,6 +92,9 @@ class RoutePaths {
   static const String collectionRecipeAdapt = '/collection/:id/adapt';
   static String collectionRecipeFor(String id) => '/collection/$id';
   static String collectionRecipeAdaptFor(String id) => '/collection/$id/adapt';
+
+  /// The Belly Buddy Plus paywall (Home while the switch is off).
+  static const String plus = '/plus';
   static const String upgradeRequired = '/upgrade-required';
   static const String healthConsent = '/health-consent';
   static const String buddyOnboarding = '/buddy-onboarding';

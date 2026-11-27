@@ -70,6 +70,9 @@ dependencies:
   share_plus: ^13.3.1
   mobile_scanner: ^7.5.0
 
+  # Store subscriptions (Belly Buddy Plus); only revenuecat_gateway.dart imports it
+  purchases_flutter: ^11.0.4
+
 dev_dependencies:
   sentry_dart_plugin: ^3.6.0
   flutter_test:

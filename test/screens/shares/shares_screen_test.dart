@@ -22,6 +22,7 @@ import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 
 import '../../helpers/app_host.dart';
 import '../../helpers/share_fakes.dart';
+import '../../helpers/purchases_fakes.dart';
 
 void main() {
   final now = DateTime(2026, 11, 26, 12);
@@ -69,6 +70,7 @@ void main() {
           RoutePaths.shareCreate,
           RoutePaths.dietitianConnect,
           RoutePaths.dietitianShareEdit,
+          RoutePaths.plus,
         ]),
       ],
     );
@@ -756,6 +758,85 @@ void main() {
     );
     await tester.pump();
     expect(find.byType(BbLoadingState), findsOneWidget);
+  });
+
+  group('Plus locked', () {
+    final locked = plusLockedOverrides;
+
+    testWidgets('existing shares stay listed', (tester) async {
+      await pump(tester, [
+        testShare(),
+        testDietitianShare(id: 'd1'),
+      ], overrides: locked);
+      expect(find.text('Verbundene Berater:innen'), findsOneWidget);
+      expect(find.text('Links'), findsOneWidget);
+      expect(find.text('Freigabe beenden'), findsOneWidget);
+    });
+
+    testWidgets('ending a link still works', (tester) async {
+      await pump(tester, [testShare()], overrides: locked);
+      await tester.tap(find.text('Freigabe beenden'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Beenden'));
+      await tester.pumpAndSettle();
+
+      expect(service.ended, ['s1']);
+      expect(find.text('page:/plus'), findsNothing);
+    });
+
+    testWidgets('ending a connection still works', (tester) async {
+      await pump(tester, [testDietitianShare(id: 'abc')], overrides: locked);
+      await tester.tap(find.text('Beenden'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Beenden'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(service.ended, ['abc']);
+      expect(find.text('page:/plus'), findsNothing);
+    });
+
+    testWidgets('„Link erstellen" opens /plus', (tester) async {
+      await pump(tester, [], overrides: locked);
+      await tester.tap(find.text('Link erstellen'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/plus'), findsOneWidget);
+      expect(find.text('page:/shares/new'), findsNothing);
+    });
+
+    testWidgets('„Berater:in verbinden" stays free: opens the connect '
+        'screen', (tester) async {
+      await pump(tester, [], overrides: locked);
+      await tester.tap(find.text('Berater:in verbinden'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/plus'), findsNothing);
+      expect(find.text('page:${RoutePaths.dietitianConnect}'), findsOneWidget);
+    });
+
+    testWidgets('„Neu erstellen" opens /plus', (tester) async {
+      await pump(tester, [testShare()], overrides: locked);
+      await tester.tap(find.text('Neu erstellen'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/plus'), findsOneWidget);
+    });
+
+    testWidgets('„Ändern" still opens the edit screen', (tester) async {
+      await pump(tester, [testDietitianShare(id: 'abc')], overrides: locked);
+      await tester.tap(find.text('Ändern'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/:id/edit'), findsOneWidget);
+    });
+
+    testWidgets('open: the buttons create as before', (tester) async {
+      await pump(tester, [], overrides: plusOpenOverrides);
+      await tester.tap(find.text('Berater:in verbinden'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/connect'), findsOneWidget);
+    });
   });
 }
 

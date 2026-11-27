@@ -384,6 +384,22 @@ class AppConstants {
   static const String privacyPolicyUrl =
       'https://app.bellybuddy.at/datenschutz';
 
+  /// Terms of use (Nutzungsbedingungen) of Belly Buddy Plus on the web app.
+  static const String termsUrl =
+      'https://app.bellybuddy.at/nutzungsbedingungen';
+
+  /// Where an iPhone user manages their App Store subscriptions.
+  static const String appleSubscriptionsUrl =
+      'https://apps.apple.com/account/subscriptions';
+
+  /// Google Play product id of the Belly Buddy Plus subscription.
+  static const String playPlusProductId = 'bellybuddy_plus';
+
+  /// Google Play's page for the subscription [productId] of [packageName].
+  static String playSubscriptionsUrl(String productId, String packageName) =>
+      'https://play.google.com/store/account/subscriptions'
+      '?sku=$productId&package=$packageName';
+
   /// Belly Buddy Connect, the dietitian portal; a practice QR code holds
   /// `<connectUrl>/c/<code>`.
   static const String connectUrl = 'https://connect.bellybuddy.at';

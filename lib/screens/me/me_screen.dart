@@ -9,13 +9,17 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/plus_provider.dart';
 import '../../providers/rating_provider.dart';
 import '../../providers/shares_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
+import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
 import '../../services/app_version_service.dart';
+import '../../services/plus/plus_copy.dart';
 import '../../services/progress/progress_copy.dart';
+import '../../services/purchases/purchases_gateway.dart';
 import '../../utils/buddy_name.dart';
 import '../../utils/logger.dart';
 import '../../utils/url_utils.dart';
@@ -44,6 +48,7 @@ class MeScreen extends ConsumerStatefulWidget {
   static const streakKey = Key('me_streak');
   static const progressKey = Key('me_progress');
   static const shareKey = Key('me_share');
+  static const plusKey = Key('me_plus');
   static const settingsKey = Key('me_settings');
   static const tutorialKey = Key('me_tutorial');
   static const rateKey = Key('me_rate');
@@ -188,7 +193,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   bool _openingShare = false;
 
   /// The share row: the list; with no share (or no list) the create screen
-  /// on top of it.
+  /// on top of it, unless Plus is locked (a new link needs it, connecting
+  /// to a dietitian from the list is free).
   void _openShare() {
     if (_openingShare) return;
     _openingShare = true;
@@ -196,8 +202,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final shares = ref.read(sharesProvider).value;
     WidgetsBinding.instance.addPostFrameCallback((_) => _openingShare = false);
     unawaited(context.push(RoutePaths.shares));
-    // Without a share the create screen goes on top of the list at once.
-    if (shares == null || shares.isEmpty) {
+    // Without a share the create screen goes on top of the list at once;
+    // while Plus is locked the list alone, so no paywall stands before the
+    // free „Berater:in verbinden".
+    if ((shares == null || shares.isEmpty) && !ref.read(plusLockedProvider)) {
       unawaited(context.push(RoutePaths.shareCreate));
     }
   }
@@ -217,6 +225,21 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     // Watched so the list is loaded when the row is tapped; only whether it
     // is empty matters here.
     ref.watch(sharesProvider.select((s) => s.value?.isEmpty));
+    // Without an SDK key (R14) nothing can be bought: no row.
+    final paywallOn =
+        ref.watch(paywallEnabledProvider) &&
+        ref.watch(purchasesGatewayProvider.select((g) => g.available));
+    // While the status loads or fails the row shows without a subtitle: any
+    // line could be wrong for a subscriber. The value is not enough: after
+    // an account switch Riverpod keeps the previous (blanked) value while
+    // the next user's status loads.
+    final plusSubtitle = paywallOn
+        ? ref.watch(
+            plusProvider.select(
+              (p) => p.isLoading || p.hasError ? null : p.value,
+            ),
+          )
+        : null;
     final showShareBadge = ref.watch(shareRowBadgeProvider).value ?? false;
 
     final rows = [
@@ -251,6 +274,16 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         badge: showShareBadge ? 'Neu' : null,
         onTap: _openShare,
       ),
+      if (paywallOn)
+        BbSettingsItem(
+          key: MeScreen.plusKey,
+          icon: Icons.workspace_premium_outlined,
+          title: PlusCopy.title,
+          subtitle: plusSubtitle == null
+              ? null
+              : PlusCopy.statusLine(plusSubtitle),
+          onTap: () => unawaited(context.openPlus()),
+        ),
       BbSettingsItem(
         key: MeScreen.settingsKey,
         icon: Icons.settings_outlined,

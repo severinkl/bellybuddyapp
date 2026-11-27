@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/plus_provider.dart';
+import '../../../services/plus/plus_copy.dart';
+import '../../../services/purchases/purchases_gateway.dart';
 import '../../../utils/logger.dart';
 
 /// Whether [typed] confirms the deletion: „LÖSCHEN", trimmed and in any
@@ -72,6 +75,22 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // The store keeps billing a subscription the deletion leaves behind. Said
+    // also while the status is unknown (loading, failed): a subscriber must
+    // not miss it. Not once it is cancelled (no renewal).
+    final storeOn =
+        ref.watch(paywallEnabledProvider) &&
+        ref.watch(purchasesGatewayProvider.select((g) => g.available));
+    final subscribed =
+        storeOn &&
+        ref.watch(
+          plusProvider.select(
+            (p) =>
+                p.isLoading ||
+                p.hasError ||
+                (p.value?.granted == true && p.value!.willRenew),
+          ),
+        );
     return AlertDialog(
       scrollable: true,
       shape: RoundedRectangleBorder(
@@ -111,6 +130,13 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
           const _BulletItem('Dein Profil und Einstellungen'),
           const _BulletItem('Alle gespeicherten Rezepte'),
           const _BulletItem('Dein Benutzerkonto'),
+          if (subscribed) ...[
+            AppConstants.gap12,
+            const Text(
+              PlusCopy.deleteWarning,
+              style: TextStyle(fontSize: AppTheme.fontSizeBody),
+            ),
+          ],
           AppConstants.gap16,
           TextField(
             controller: _controller,

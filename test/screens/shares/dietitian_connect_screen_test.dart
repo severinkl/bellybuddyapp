@@ -14,6 +14,7 @@ import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/models/dietitian_card.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/share_launcher_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/shares/dietitian_connect_screen.dart';
@@ -64,6 +65,7 @@ void main() {
     WidgetTester tester, {
     List<DataShare> shares = const [],
     String? savedName,
+    bool paywallOn = true,
   }) async {
     SharedPreferences.setMockInitialValues({});
     if (savedName != null) {
@@ -80,6 +82,7 @@ void main() {
     final container = ProviderContainer.test(
       overrides: [
         currentUserIdProvider.overrideWithValue('u1'),
+        paywallEnabledProvider.overrideWithValue(paywallOn),
         shareServiceProvider.overrideWithValue(service),
         buddyClockProvider.overrideWithValue(() => DateTime(2026, 11, 26, 12)),
         shareLauncherProvider.overrideWithValue((_, _) async {}),
@@ -100,6 +103,10 @@ void main() {
               builder: (_, _) => const DietitianConnectScreen(),
             ),
           ],
+        ),
+        GoRoute(
+          path: RoutePaths.plus,
+          builder: (_, _) => const Scaffold(body: Text('page:/plus')),
         ),
       ],
     );
@@ -344,6 +351,46 @@ void main() {
     expect(field.decoration?.errorText, gone);
     expect(field.controller?.text, 'BERGER-7K2');
     expect(find.byType(SnackBar), findsNothing);
+  });
+
+  // Connecting is free (decision 16): a 402 plus_required is no longer
+  // expected and is handled like any other error.
+  for (final paywallOn in [true, false]) {
+    testWidgets('a 402 plus_required keeps the form with core\'s text, no '
+        'paywall (switch ${paywallOn ? 'on' : 'off'})', (tester) async {
+      await pump(tester, savedName: 'Maria', paywallOn: paywallOn);
+      await lookUp(tester, 'BERGER-7K2');
+      service.connectFails = const ShareException(
+        status: 402,
+        message: 'Dafür brauchst du Belly Buddy Plus.',
+        code: 'plus_required',
+      );
+      await tester.tap(submit());
+      await tester.pumpAndSettle();
+
+      expect(find.text('page:/plus'), findsNothing);
+      expect(find.byType(DietitianConnectScreen), findsOneWidget);
+      expect(find.text('Gefunden'), findsOneWidget);
+      expect(find.text('Dafür brauchst du Belly Buddy Plus.'), findsOneWidget);
+    });
+  }
+
+  testWidgets('a 402 without the code keeps the form with the usual text', (
+    tester,
+  ) async {
+    await pump(tester, savedName: 'Maria');
+    await lookUp(tester, 'BERGER-7K2');
+    service.connectFails = const ShareException(status: 402);
+    await tester.tap(submit());
+    await tester.pumpAndSettle();
+
+    expect(find.text('page:/plus'), findsNothing);
+    expect(find.byType(DietitianConnectScreen), findsOneWidget);
+    expect(find.text('Gefunden'), findsOneWidget);
+    expect(
+      find.text('Das hat nicht geklappt. Versuch es später nochmal.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a failure without a message shows the usual text', (

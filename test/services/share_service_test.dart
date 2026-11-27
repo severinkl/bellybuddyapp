@@ -192,6 +192,74 @@ void main() {
       );
     });
 
+    test('402 plus_required: plusRequired, with code and message', () async {
+      when(() => functions.invoke(any(), body: any(named: 'body'))).thenThrow(
+        const FunctionException(
+          status: 402,
+          details: {
+            'error': 'Dafür brauchst du Belly Buddy Plus.',
+            'code': 'plus_required',
+          },
+        ),
+      );
+      await expectLater(
+        service.create(_new),
+        throwsA(
+          isA<ShareException>()
+              .having((e) => e.plusRequired, 'plusRequired', isTrue)
+              .having((e) => e.code, 'code', 'plus_required')
+              .having(
+                (e) => e.message,
+                'message',
+                'Dafür brauchst du Belly Buddy Plus.',
+              ),
+        ),
+      );
+    });
+
+    test('a 402 without the code, or the code on another status, is not '
+        'plusRequired', () async {
+      for (final (status, details) in [
+        (402, <String, Object?>{'error': 'Zahlen bitte.'}),
+        (402, <String, Object?>{'code': 'something_else'}),
+        (403, <String, Object?>{'code': 'plus_required'}),
+      ]) {
+        when(
+          () => functions.invoke(any(), body: any(named: 'body')),
+        ).thenThrow(FunctionException(status: status, details: details));
+        await expectLater(
+          service.create(_new),
+          throwsA(
+            isA<ShareException>().having(
+              (e) => e.plusRequired,
+              'plusRequired',
+              isFalse,
+            ),
+          ),
+          reason: '$status $details',
+        );
+      }
+    });
+
+    test('a 402 plus_required on connect is plusRequired too', () async {
+      when(() => functions.invoke(any(), body: any(named: 'body'))).thenThrow(
+        const FunctionException(
+          status: 402,
+          details: {'code': 'plus_required'},
+        ),
+      );
+      await expectLater(
+        service.connect('BERGER-7K2', _terms),
+        throwsA(
+          isA<ShareException>().having(
+            (e) => e.plusRequired,
+            'plusRequired',
+            isTrue,
+          ),
+        ),
+      );
+    });
+
     test('403 with a non-JSON body has a status and no message', () async {
       when(
         () => functions.invoke(any(), body: any(named: 'body')),

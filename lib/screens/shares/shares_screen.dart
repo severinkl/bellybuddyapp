@@ -8,7 +8,9 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/data_share.dart';
 import '../../providers/buddy_provider.dart';
+import '../../providers/plus_provider.dart';
 import '../../providers/shares_provider.dart';
+import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/logger.dart';
@@ -202,8 +204,15 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
         links.where((v) => v.$2 == ShareState.active).length >= _maxActiveLinks;
     final dietitiansFull =
         ref.watch(activeDietitianCountProvider) >= maxActiveDietitians;
+    // New links need Plus: while it is locked, „Link erstellen" and „Neu
+    // erstellen" open the paywall. Connecting to a dietitian, „Ändern" and
+    // ending stay free.
+    final plusLocked = ref.watch(plusLockedProvider);
+    void openPlus() => unawaited(context.openPlus());
     final VoidCallback? onCreate = linksFull
         ? null
+        : plusLocked
+        ? openPlus
         : () => unawaited(context.push(RoutePaths.shareCreate));
     final now = ref.read(buddyClockProvider)();
     return Column(

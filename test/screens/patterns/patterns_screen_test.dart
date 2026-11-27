@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,11 +10,16 @@ import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
+import 'package:belly_buddy/screens/patterns/widgets/patterns_locked.dart';
+import 'package:belly_buddy/screens/patterns/widgets/patterns_plus_locked.dart';
 import 'package:belly_buddy/screens/patterns/widgets/patterns_preview.dart';
+import 'package:belly_buddy/screens/patterns/widgets/patterns_unlocked.dart';
+import 'package:belly_buddy/widgets/common/plus_locked_card.dart';
 
 import '../../helpers/app_lifecycle.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
+import '../../helpers/purchases_fakes.dart';
 
 /// The app's clock, pinned: the entries ([_entries]) lie before it, in the
 /// insights' window on any date.
@@ -25,6 +31,7 @@ Future<ProviderContainer> _pump(
   Size size = const Size(390, 844),
   double textScale = 1,
   DateTime Function()? clock,
+  List<Override> plus = const [],
 }) async {
   tester.view
     ..physicalSize = size
@@ -34,12 +41,13 @@ Future<ProviderContainer> _pump(
     overrides: [
       ...baseOverrides(entries: entries),
       buddyClockProvider.overrideWithValue(clock ?? () => _now),
+      ...plus,
     ],
   );
   final router = GoRouter(
     routes: [
       GoRoute(path: '/', builder: (_, _) => const PatternsScreen()),
-      ...stubRoutes([RoutePaths.progress]),
+      ...stubRoutes([RoutePaths.progress, RoutePaths.plus]),
     ],
   );
   addTearDown(router.dispose);
@@ -244,6 +252,69 @@ void main() {
         findsWidgets,
       );
     });
+  });
+
+  group('Belly Buddy Plus', () {
+    final locked = plusLockedOverrides;
+    final open = plusOpenOverrides;
+    final switchOff = plusSwitchOffOverrides;
+
+    testWidgets('locked after the unlock: the Plus card and the preview', (
+      tester,
+    ) async {
+      await _pump(tester, _entries(7, 3), plus: locked);
+
+      expect(find.byType(PatternsPlusLocked), findsOneWidget);
+      expect(find.byType(PatternsUnlocked), findsNothing);
+      expect(find.byType(PatternsLocked), findsNothing);
+      expect(find.byType(PatternsPreview), findsOneWidget);
+      expect(find.text('Deine Muster sind da'), findsOneWidget);
+      expect(
+        find.text(
+          'Mit Belly Buddy Plus siehst du, was an guten und schwierigen '
+          'Tagen auffällig oft dabei war.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Belly Buddy Plus ansehen'), findsOneWidget);
+    });
+
+    testWidgets('locked, the button opens /plus', (tester) async {
+      await _pump(tester, _entries(7, 3), plus: locked);
+
+      await tester.tap(find.byKey(PlusLockedCard.openKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text('page:/plus'), findsOneWidget);
+    });
+
+    testWidgets('locked before day 7: still PatternsLocked', (tester) async {
+      await _pump(tester, _entries(2, 1), plus: locked);
+
+      expect(find.byType(PatternsLocked), findsOneWidget);
+      expect(find.byType(PatternsPlusLocked), findsNothing);
+      expect(find.text('Ich sammle noch!'), findsOneWidget);
+    });
+
+    for (final (name, overrides) in [
+      ('open', open),
+      ('switch off', switchOff),
+    ]) {
+      testWidgets('$name after the unlock: PatternsUnlocked', (tester) async {
+        await _pump(tester, _entries(7, 3), plus: overrides);
+
+        expect(find.byType(PatternsUnlocked), findsOneWidget);
+        expect(find.byType(PatternsPlusLocked), findsNothing);
+        expect(find.byType(PlusLockedCard), findsNothing);
+      });
+
+      testWidgets('$name before day 7: PatternsLocked', (tester) async {
+        await _pump(tester, _entries(2, 1), plus: overrides);
+
+        expect(find.byType(PatternsLocked), findsOneWidget);
+        expect(find.byType(PlusLockedCard), findsNothing);
+      });
+    }
   });
 
   group('the „Dein Verlauf" link', () {

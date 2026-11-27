@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/buddy_onboarding_gate_provider.dart';
 import '../providers/health_consent_provider.dart';
 import '../providers/home_cover_provider.dart';
+import '../providers/plus_provider.dart';
 import '../providers/relief_provider.dart';
 import '../providers/upgrade_gate_provider.dart';
 import '../utils/logger.dart';
@@ -23,6 +24,7 @@ class _RouterRefreshNotifier extends ChangeNotifier {
     ref.listen(healthConsentRequiredProvider, (_, _) => notifyListeners());
     ref.listen(buddyOnboardingRequiredProvider, (_, _) => notifyListeners());
     ref.listen(buddyOnboardingGatePendingProvider, (_, _) => notifyListeners());
+    ref.listen(paywallEnabledProvider, (_, _) => notifyListeners());
     ref.listen(reliefEnabledProvider, (_, _) => notifyListeners());
   }
 }
@@ -111,6 +113,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         location: state.uri,
       );
       if (buddyRedirect != null) return buddyRedirect;
+
+      // The paywall exists only while the Plus switch is on.
+      if (path == RoutePaths.plus && !ref.read(paywallEnabledProvider)) {
+        return RoutePaths.dashboard;
+      }
 
       // Ruhe für den Bauch is invisible while its gate is off; never behind
       // the paywall.
@@ -418,6 +425,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           recipeId: state.pathParameters['id']!,
           requested: state.extra == true,
         ),
+      ),
+      GoRoute(
+        path: RoutePaths.plus,
+        name: RouteNames.plus,
+        builder: (_, _) => const PlusScreen(),
       ),
       GoRoute(
         path: RoutePaths.upgradeRequired,

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
+import 'package:belly_buddy/models/plus_status.dart';
 import 'package:belly_buddy/models/progress.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
@@ -14,13 +15,16 @@ import 'package:belly_buddy/providers/for_you_provider.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/knowledge_opened_provider.dart';
 import 'package:belly_buddy/providers/knowledge_provider.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/progress_provider.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/knowledge_repository.dart';
+import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
+import '../helpers/purchases_fakes.dart';
 import '../helpers/riverpod_helpers.dart';
 
 final _laktose = KnowledgeArticle(
@@ -35,6 +39,26 @@ final _verstopfung = KnowledgeArticle(
   link: Uri.parse('https://www.myfodmap.at/verstopfung'),
   category: 'Gesund verdauen',
   publishedAt: DateTime.utc(2026, 11, 21, 8),
+);
+
+final _zwiebel = KnowledgeArticle(
+  title: 'Zwiebel und Co.',
+  link: Uri.parse('https://www.myfodmap.at/zwiebel'),
+  category: 'Gesund verdauen',
+  publishedAt: DateTime.utc(2026, 11, 20, 8),
+);
+
+/// Unlocked Muster whose one „Fällt mir auf" item is Zwiebel.
+const _zwiebelInsights = Insights(
+  progress: InsightProgress(activeDays: 30, gutFeelingEntries: 30),
+  calendar: [],
+  goodDays: DayColumn(days: 0),
+  hardDays: DayColumn(days: 0),
+  noticed: [
+    Noticed(name: 'Zwiebel', hard: 9, hardDays: 10, good: 1, goodDays: 10),
+  ],
+  pick: NothingYetPick(),
+  journey: [],
 );
 
 /// A week with three Klo entries, two of them hard.
@@ -219,32 +243,8 @@ void main() {
   test(
     "another user's Muster items never shape the picks while theirs load",
     () async {
-      final zwiebel = KnowledgeArticle(
-        title: 'Zwiebel und Co.',
-        link: Uri.parse('https://www.myfodmap.at/zwiebel'),
-        category: 'Gesund verdauen',
-        publishedAt: DateTime.utc(2026, 11, 20, 8),
-      );
-      repo = FakeKnowledgeRepository(articles: [zwiebel]);
-      final insights = _GatedInsights(
-        const Insights(
-          progress: InsightProgress(activeDays: 30, gutFeelingEntries: 30),
-          calendar: [],
-          goodDays: DayColumn(days: 0),
-          hardDays: DayColumn(days: 0),
-          noticed: [
-            Noticed(
-              name: 'Zwiebel',
-              hard: 9,
-              hardDays: 10,
-              good: 1,
-              goodDays: 10,
-            ),
-          ],
-          pick: NothingYetPick(),
-          journey: [],
-        ),
-      );
+      repo = FakeKnowledgeRepository(articles: [_zwiebel]);
+      final insights = _GatedInsights(_zwiebelInsights);
       final c = ProviderContainer.test(
         overrides: [
           user.override,
@@ -259,7 +259,9 @@ void main() {
       await c.read(knowledgeOpenedProvider.future);
       await c.read(insightsProvider.future);
       await pumpEventQueue();
-      expect(links(c), [zwiebel.link], reason: 'user A: the Muster item picks');
+      expect(links(c), [
+        _zwiebel.link,
+      ], reason: 'user A: the Muster item picks');
 
       insights.gate = Completer<void>();
       user.set(c, 'other-user');
@@ -322,4 +324,86 @@ void main() {
       await other;
     },
   );
+  group('Belly Buddy Plus: the Muster shape the picks only while open', () {
+    /// The switch [paywallOn], a signed-in user with an SDK key and Plus in
+    /// [state]; Zwiebel is the user's Muster item.
+    Future<ProviderContainer> plusContainer({
+      required bool paywallOn,
+      required PlusState state,
+    }) async {
+      repo = FakeKnowledgeRepository(articles: [_zwiebel]);
+      final c = ProviderContainer.test(
+        overrides: [
+          user.override,
+          knowledgeRepositoryProvider.overrideWithValue(repo),
+          progressProvider.overrideWith(() => progress),
+          insightsProviderSeededWith(_zwiebelInsights),
+          profileProviderSeededWith(testUserProfile(intolerances: const [])),
+          paywallEnabledProvider.overrideWithValue(paywallOn),
+          purchasesGatewayProvider.overrideWithValue(FakePurchasesGateway()),
+          plusProvider.overrideWith(
+            () => FakePlusNotifier.status(PlusStatus(state: state)),
+          ),
+        ],
+      );
+      c.listen(forYouProvider, (_, _) {});
+      await settle(c);
+      await c.read(insightsProvider.future);
+      await pumpEventQueue();
+      return c;
+    }
+
+    test('locked: no Muster pick, no Muster reason', () async {
+      final c = await plusContainer(paywallOn: true, state: PlusState.none);
+      expect(c.read(plusLockedProvider), isTrue);
+      expect(c.read(forYouProvider), isEmpty);
+    });
+
+    test('lapsed counts as locked', () async {
+      final c = await plusContainer(paywallOn: true, state: PlusState.lapsed);
+      expect(c.read(forYouProvider), isEmpty);
+    });
+
+    test('unlocked (trial): the Muster item picks', () async {
+      final c = await plusContainer(paywallOn: true, state: PlusState.trial);
+      expect(c.read(plusLockedProvider), isFalse);
+      expect(links(c), [_zwiebel.link]);
+      expect(
+        c.read(forYouProvider).single.reason,
+        'Weil Zwiebel bei dir auffällt',
+      );
+    });
+
+    test('switch off: the Muster item picks, as before Plus', () async {
+      final c = await plusContainer(paywallOn: false, state: PlusState.none);
+      expect(c.read(plusLockedProvider), isFalse);
+      expect(links(c), [_zwiebel.link]);
+    });
+
+    test('status unknown (loading): fails open', () async {
+      repo = FakeKnowledgeRepository(articles: [_zwiebel]);
+      final hold = Completer<PlusStatus>();
+      final c = ProviderContainer.test(
+        overrides: [
+          user.override,
+          knowledgeRepositoryProvider.overrideWithValue(repo),
+          progressProvider.overrideWith(() => progress),
+          insightsProviderSeededWith(_zwiebelInsights),
+          profileProviderSeededWith(testUserProfile(intolerances: const [])),
+          paywallEnabledProvider.overrideWithValue(true),
+          purchasesGatewayProvider.overrideWithValue(FakePurchasesGateway()),
+          plusProvider.overrideWith(() => FakePlusNotifier(() => hold.future)),
+        ],
+      );
+      c.listen(forYouProvider, (_, _) {});
+      await settle(c);
+      await c.read(insightsProvider.future);
+      await pumpEventQueue();
+      expect(links(c), [_zwiebel.link]);
+
+      hold.complete(PlusStatus.none);
+      await pumpEventQueue();
+      expect(c.read(forYouProvider), isEmpty, reason: 'now known: locked');
+    });
+  });
 }
