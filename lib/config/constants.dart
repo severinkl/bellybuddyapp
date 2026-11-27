@@ -383,6 +383,9 @@ class AppConstants {
   // counter doubles as a visible limit so the user isn't surprised.
   static const int dislikeCommentMaxLength = 1000;
 
+  /// Longest feedback message, in characters a person sees.
+  static const int feedbackMaxLength = 2000;
+
   // External URLs
   static const String feedbackFormUrl =
       'https://us20.list-manage.com/survey?u=526bdf1360ec4bf225504e006&id=d47032793c&attribution=false';
