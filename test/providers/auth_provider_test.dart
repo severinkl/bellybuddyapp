@@ -243,7 +243,17 @@ void main() {
       expect(await kept(container), isFalse);
     });
 
+    // Still signed in on this device after a failure.
+    const signedIn = User(
+      id: 'u1',
+      appMetadata: {},
+      userMetadata: {},
+      aud: 'authenticated',
+      createdAt: '2026-01-01T00:00:00Z',
+    );
+
     test('survive a failed sign-out', () async {
+      when(() => mockRepo.currentUser).thenReturn(signedIn);
       when(() => mockRepo.signOut()).thenThrow(Exception('offline'));
       final container = await containerWithSecret();
       await expectLater(
@@ -254,6 +264,7 @@ void main() {
     });
 
     test('survive a failed account deletion', () async {
+      when(() => mockRepo.currentUser).thenReturn(signedIn);
       when(() => mockRepo.deleteAccount()).thenThrow(Exception('offline'));
       final container = await containerWithSecret();
       await expectLater(
@@ -262,6 +273,33 @@ void main() {
       );
       expect(await kept(container), isTrue);
     });
+
+    test('are cleared when the sign-out signed out locally but the server '
+        'call failed', () async {
+      // gotrue drops the local session first, then calls the server.
+      when(() => mockRepo.currentUser).thenReturn(null);
+      when(() => mockRepo.signOut()).thenThrow(Exception('offline'));
+      final container = await containerWithSecret();
+      await expectLater(
+        container.read(authNotifierProvider.notifier).signOut(),
+        throwsA(isA<Exception>()),
+      );
+      expect(await kept(container), isFalse);
+    });
+
+    test(
+      'are cleared when the account deletion failed after signing out',
+      () async {
+        when(() => mockRepo.currentUser).thenReturn(null);
+        when(() => mockRepo.deleteAccount()).thenThrow(Exception('offline'));
+        final container = await containerWithSecret();
+        await expectLater(
+          container.read(authNotifierProvider.notifier).deleteAccount(),
+          throwsA(isA<Exception>()),
+        );
+        expect(await kept(container), isFalse);
+      },
+    );
 
     test('a failing clear does not fail a successful sign-out', () async {
       when(() => mockRepo.signOut()).thenAnswer((_) async {});

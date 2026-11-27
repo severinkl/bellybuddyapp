@@ -110,12 +110,15 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
 
   Future<void> signOut() async {
     state = const AsyncValue.loading();
+    final userId = ref.read(currentUserIdProvider);
     try {
-      final userId = ref.read(currentUserIdProvider);
       await _repo.signOut();
       await _clearShareSecrets(userId);
       state = const AsyncValue.data(null);
     } catch (e, st) {
+      // gotrue drops the local session before its server call: signed out
+      // on this device although the call failed, the secrets go too.
+      if (_repo.currentUser == null) await _clearShareSecrets(userId);
       state = AsyncValue.error(e, st);
       rethrow;
     }
@@ -128,12 +131,15 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
 
   Future<void> deleteAccount() async {
     state = const AsyncValue.loading();
+    final userId = ref.read(currentUserIdProvider);
     try {
-      final userId = ref.read(currentUserIdProvider);
       await _repo.deleteAccount();
       await _clearShareSecrets(userId);
       state = const AsyncValue.data(null);
     } catch (e, st) {
+      // gotrue drops the local session before its server call: signed out
+      // on this device although the call failed, the secrets go too.
+      if (_repo.currentUser == null) await _clearShareSecrets(userId);
       state = AsyncValue.error(e, st);
       rethrow;
     }
