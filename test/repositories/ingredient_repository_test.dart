@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
+import 'package:belly_buddy/services/alternatives/alternative_ranking.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 
 import '../helpers/mocks.dart';
 import '../helpers/fixtures.dart';
@@ -172,18 +174,26 @@ void main() {
     );
 
     group('ranking by the meals eaten afterwards', () {
-      void stub() {
+      /// Ten days ago, an instant on the wire.
+      final suggestedAt = DateTime.now().subtract(const Duration(days: 10));
+
+      void stub({
+        String? createdAt,
+        String? ingredientId = 'ing-1',
+        List<Map<String, dynamic>> more = const [],
+      }) {
         when(() => ingredientService.fetchSuggestions(any())).thenAnswer(
           (_) async => [
             {
               'id': 'sug-1',
-              'detected_ingredient_id': 'ing-1',
+              'detected_ingredient_id': ingredientId,
               'meal_id': null,
               'helptext': null,
               'seen_at': null,
-              'created_at': '2026-11-01T10:00:00+00:00',
+              'created_at': createdAt ?? suggestedAt.toUtc().toIso8601String(),
               'ingredients': {'id': 'ing-1', 'name': 'Milch'},
             },
+            ...more,
           ],
         );
         when(() => ingredientService.fetchReplacements(any())).thenAnswer(
@@ -200,13 +210,16 @@ void main() {
         ).thenAnswer((_) async => []);
       }
 
-      test('reads the last 180 days and ranks the eaten ones first', () async {
+      test('reads from the earliest suggestion\'s local date and ranks the '
+          'eaten ones first', () async {
         stub();
         when(() => ingredientService.fetchMealsSince(any(), any())).thenAnswer(
           (_) async => [
             {
               'id': 'm1',
-              'tracked_at': '2026-11-05T12:00:00+00:00',
+              'tracked_at': wallClockToWire(
+                suggestedAt.add(const Duration(days: 2)),
+              ),
               'ingredients': ['Tofu (fest, natur)', 'Reis'],
             },
           ],
@@ -225,8 +238,55 @@ void main() {
                   ),
                 ).captured.single
                 as DateTime;
+        expect(
+          since,
+          DateTime(suggestedAt.year, suggestedAt.month, suggestedAt.day),
+        );
+      });
+
+      Future<DateTime> sinceRead() async {
+        when(
+          () => ingredientService.fetchMealsSince(any(), any()),
+        ).thenAnswer((_) async => []);
+        await repo.fetchSuggestionGroups(testUserId);
+        return verify(
+              () => ingredientService.fetchMealsSince(testUserId, captureAny()),
+            ).captured.single
+            as DateTime;
+      }
+
+      test('the earliest suggestion of all groups bounds it', () async {
+        final older = suggestedAt.subtract(const Duration(days: 20));
+        stub(
+          more: [
+            {
+              'id': 'sug-2',
+              'detected_ingredient_id': 'ing-2',
+              'meal_id': null,
+              'helptext': null,
+              'seen_at': null,
+              'created_at': older.toUtc().toIso8601String(),
+              'ingredients': {'id': 'ing-2', 'name': 'Zwiebel'},
+            },
+          ],
+        );
+        expect(await sinceRead(), DateTime(older.year, older.month, older.day));
+      });
+
+      test('never more than 180 days', () async {
+        stub(createdAt: '2020-01-01T10:00:00+00:00');
         final now = DateTime.now();
-        expect(since, DateTime(now.year, now.month, now.day - 180));
+        expect(
+          await sinceRead(),
+          DateTime(now.year, now.month, now.day - rankingMealDays),
+        );
+      });
+
+      test('no group (no detected ingredient): no meals read', () async {
+        stub(ingredientId: null);
+        final groups = await repo.fetchSuggestionGroups(testUserId);
+        expect(groups, isEmpty);
+        verifyNever(() => ingredientService.fetchMealsSince(any(), any()));
       });
 
       test('failing meals: ranked without them', () async {
