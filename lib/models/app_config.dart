@@ -1,5 +1,5 @@
-/// Version thresholds read from the Supabase `app_config` table and compared
-/// against the installed app's semver.
+/// The Supabase `app_config` table: the version thresholds compared against
+/// the installed app's semver, and remote feature switches.
 class AppConfig {
   const AppConfig({
     required this.minimum,

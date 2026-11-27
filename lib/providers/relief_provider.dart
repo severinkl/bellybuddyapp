@@ -61,16 +61,14 @@ class ReliefFeedbackNotifier extends AsyncNotifier<Map<String, ReliefAnswer>> {
     final userId = ref.watch(currentUserIdProvider);
     if (userId == null) return {};
     final prefs = await SharedPreferences.getInstance();
-    Map<String, ReliefAnswer>? parsed;
     try {
-      parsed = tryParseReliefAnswers(
+      final parsed = tryParseReliefAnswers(
         prefs.getString('${AppConstants.keyReliefFeedbackPrefix}$userId'),
       );
+      if (parsed != null) return parsed;
     } catch (_) {
       // Not a string under the key (TypeError): corrupt like bad JSON.
-      parsed = null;
     }
-    if (parsed != null) return parsed;
     if (!_corruptLogged) {
       _corruptLogged = true;
       _log.warn('Stored feedback is corrupt; treating it as empty');

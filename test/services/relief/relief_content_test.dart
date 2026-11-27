@@ -107,7 +107,6 @@ void main() {
       'Einatmen, noch 3 Sekunden',
     );
     expect(ReliefCopy.phaseSemantics('Halten', 1), 'Halten, noch 1 Sekunde');
-    expect(ReliefCopy.safetyLinkLabel, ReliefCopy.safetySheetTitle);
   });
 
   test('no promise words', () {

@@ -66,7 +66,7 @@ class _ReliefDoneViewState extends ConsumerState<ReliefDoneView> {
                 const BuddySays(
                   mood: BuddyMood.zen,
                   line: ReliefCopy.doneLine,
-                  height: AppConstants.reliefDoneBuddyHeight,
+                  height: AppConstants.reliefBuddyHeight,
                 ),
                 AppConstants.gap24,
                 if (answer == null) ...[
@@ -89,10 +89,7 @@ class _ReliefDoneViewState extends ConsumerState<ReliefDoneView> {
                         OutlinedButton(
                           onPressed: () => _answerWith(a),
                           style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(
-                              AppConstants.minTapTarget,
-                              AppConstants.minTapTarget,
-                            ),
+                            minimumSize: AppConstants.minTapSize,
                           ),
                           child: Text(label),
                         ),
@@ -111,7 +108,7 @@ class _ReliefDoneViewState extends ConsumerState<ReliefDoneView> {
                     Center(
                       child: TextButton(
                         onPressed: () => showReliefSafetySheet(context),
-                        child: const Text(ReliefCopy.safetyLinkLabel),
+                        child: const Text(ReliefCopy.safetySheetTitle),
                       ),
                     ),
                   ],
@@ -121,10 +118,7 @@ class _ReliefDoneViewState extends ConsumerState<ReliefDoneView> {
                   child: TextButton(
                     onPressed: widget.onFinish,
                     style: TextButton.styleFrom(
-                      minimumSize: const Size(
-                        AppConstants.minTapTarget,
-                        AppConstants.minTapTarget,
-                      ),
+                      minimumSize: AppConstants.minTapSize,
                     ),
                     child: const Text(ReliefCopy.done),
                   ),
@@ -133,10 +127,7 @@ class _ReliefDoneViewState extends ConsumerState<ReliefDoneView> {
             ),
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
-          child: ReliefSafetyLine(),
-        ),
+        const ReliefSafetyLine(),
       ],
     );
   }

@@ -7,12 +7,19 @@ import '../../../services/relief/relief_content.dart';
 import '../../../utils/url_utils.dart';
 
 /// „Das ersetzt keine ärztliche Hilfe. …" with an info icon; a tap opens
-/// [showReliefSafetySheet].
+/// [showReliefSafetySheet]. Inset by [AppConstants.spacingMd] on both sides.
 class ReliefSafetyLine extends StatelessWidget {
   const ReliefSafetyLine({super.key});
 
   @override
   Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
+      child: _line(context),
+    );
+  }
+
+  Widget _line(BuildContext context) {
     return InkWell(
       onTap: () => showReliefSafetySheet(context),
       borderRadius: BorderRadius.circular(AppConstants.radiusSm),
@@ -152,7 +159,7 @@ class _DialRow extends StatelessWidget {
   Future<void> _dial(BuildContext context) async {
     final opened = await openExternalUrl(
       context,
-      Uri(scheme: 'tel', path: dial.tel).toString(),
+      Uri(scheme: 'tel', path: dial.number.replaceAll(' ', '')).toString(),
       failureMessage: ReliefCopy.dialFailed(dial.number),
       open: open,
     );
@@ -169,10 +176,7 @@ class _DialRow extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: () => _dial(context),
             style: OutlinedButton.styleFrom(
-              minimumSize: const Size(
-                AppConstants.minTapTarget,
-                AppConstants.minTapTarget,
-              ),
+              minimumSize: AppConstants.minTapSize,
             ),
             icon: const Icon(Icons.phone, size: AppConstants.iconSizeSm),
             label: Text(dial.number),

@@ -48,22 +48,22 @@ void main() {
     });
   });
 
-  group('parseReliefAnswers', () {
-    test('invalid json gives an empty map', () {
-      expect(parseReliefAnswers('not json'), isEmpty);
-      expect(parseReliefAnswers(null), isEmpty);
-      expect(parseReliefAnswers('[1]'), isEmpty);
+  group('tryParseReliefAnswers', () {
+    test('corrupt json gives null, no json an empty map', () {
+      expect(tryParseReliefAnswers('not json'), isNull);
+      expect(tryParseReliefAnswers(null), isEmpty);
+      expect(tryParseReliefAnswers('[1]'), isNull);
     });
 
     test('unknown ids and answers are dropped', () {
       expect(
-        parseReliefAnswers('{"x":"yes","waerme":"maybe","waerme2":1}'),
+        tryParseReliefAnswers('{"x":"yes","waerme":"maybe","waerme2":1}'),
         isEmpty,
       );
     });
 
     test('valid entries are kept', () {
-      expect(parseReliefAnswers('{"waerme":"little"}'), {
+      expect(tryParseReliefAnswers('{"waerme":"little"}'), {
         'waerme': ReliefAnswer.little,
       });
     });

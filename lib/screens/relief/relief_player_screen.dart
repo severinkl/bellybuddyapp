@@ -125,9 +125,6 @@ class _ReliefPlayerScreenState extends ConsumerState<ReliefPlayerScreen> {
     final state = ref.watch(_provider);
     final player = ref.read(_provider.notifier);
     final exercise = player.exercise;
-    final inStep =
-        state.status == ReliefPlayerStatus.running ||
-        state.status == ReliefPlayerStatus.paused;
     return Scaffold(
       appBar: AppBar(
         title: Text(exercise.title),
@@ -137,7 +134,7 @@ class _ReliefPlayerScreenState extends ConsumerState<ReliefPlayerScreen> {
           onPressed: _close,
         ),
         actions: [
-          if (inStep)
+          if (state.isActive)
             IconButton(
               icon: const Icon(Icons.info_outline),
               tooltip: ReliefCopy.safetySheetTitle,
@@ -254,24 +251,14 @@ class _ReadyView extends StatelessWidget {
           padding: const EdgeInsets.symmetric(
             horizontal: AppConstants.spacingMd,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              FilledButton(
-                onPressed: onStart,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(
-                    AppConstants.minTapTarget,
-                    AppConstants.minTapTarget,
-                  ),
-                ),
-                child: const Text(ReliefCopy.start),
-              ),
-              AppConstants.gap8,
-              const ReliefSafetyLine(),
-            ],
+          child: FilledButton(
+            onPressed: onStart,
+            style: FilledButton.styleFrom(minimumSize: AppConstants.minTapSize),
+            child: const Text(ReliefCopy.start),
           ),
         ),
+        AppConstants.gap8,
+        const ReliefSafetyLine(),
       ],
     );
   }

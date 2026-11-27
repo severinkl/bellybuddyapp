@@ -22,13 +22,9 @@ List<ReliefExercise> orderedExercises(
   ];
 }
 
-/// The answers stored as JSON; anything invalid gives `{}`, unknown ids and
-/// answers are dropped.
-Map<String, ReliefAnswer> parseReliefAnswers(String? json) =>
-    tryParseReliefAnswers(json) ?? {};
-
-/// Like [parseReliefAnswers], but null when [json] is corrupt (not JSON, or
-/// not a map); null input is simply empty.
+/// The answers stored as JSON, or null when [json] is corrupt (not JSON, or
+/// not a map); null input is simply empty. Unknown ids and answers are
+/// dropped.
 Map<String, ReliefAnswer>? tryParseReliefAnswers(String? json) {
   if (json == null) return {};
   try {

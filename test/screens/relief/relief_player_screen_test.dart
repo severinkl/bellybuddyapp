@@ -9,6 +9,7 @@ import 'package:belly_buddy/screens/relief/widgets/relief_safety.dart';
 import 'package:belly_buddy/services/relief/relief_content.dart';
 import 'package:belly_buddy/services/relief/relief_rules.dart';
 import 'package:belly_buddy/services/relief/screen_awake.dart';
+import 'package:belly_buddy/widgets/common/bb_progress_bar.dart';
 
 import '../../helpers/app_lifecycle.dart';
 import '../../helpers/layout_checks.dart';
@@ -119,7 +120,7 @@ void main() {
       expect(find.text(ReliefCopy.stepOf(1, 6)), findsOneWidget);
       expect(find.text(exercise('bauchmassage').steps[0].text), findsOneWidget);
       expect(find.text('0:20'), findsOneWidget);
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.byType(BbProgressBar), findsOneWidget);
       expect(find.byType(ReliefSafetyLine), findsNothing);
       expect(find.byTooltip(ReliefCopy.safetySheetTitle), findsOneWidget);
 
@@ -265,7 +266,7 @@ void main() {
       expect(_recorded, [('bauchatmung', ReliefAnswer.no)]);
       expect(find.text(ReliefCopy.thanksNo), findsOneWidget);
       expect(find.text(ReliefCopy.answerNo), findsNothing);
-      expect(find.text(ReliefCopy.safetyLinkLabel), findsOneWidget);
+      expect(find.text(ReliefCopy.safetySheetTitle), findsOneWidget);
     });
 
     testWidgets('„Ja" thanks', (tester) async {

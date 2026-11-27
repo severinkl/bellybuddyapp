@@ -11,6 +11,7 @@ import '../../services/relief/relief_content.dart';
 import '../../services/relief/relief_rules.dart';
 import '../../widgets/buddy/buddy_pose.dart';
 import '../../widgets/buddy/buddy_says.dart';
+import '../../widgets/common/bb_card.dart';
 import 'widgets/relief_safety.dart';
 
 /// "Ruhe für den Bauch" (`/relief`): the Buddy's welcome and one card per
@@ -42,7 +43,7 @@ class ReliefListScreen extends ConsumerWidget {
                   const BuddySays(
                     mood: BuddyMood.zen,
                     line: ReliefCopy.listIntro,
-                    height: AppConstants.reliefListBuddyHeight,
+                    height: AppConstants.reliefBuddyHeight,
                   ),
                   AppConstants.gap16,
                   for (final exercise in exercises) ...[
@@ -56,10 +57,7 @@ class ReliefListScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
-              child: ReliefSafetyLine(),
-            ),
+            const ReliefSafetyLine(),
           ],
         ),
       ),
@@ -80,68 +78,55 @@ class _ExerciseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        onTap: () => context.push(RoutePaths.reliefExerciseFor(exercise.id)),
-        child: Padding(
-          padding: AppConstants.paddingMd,
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      exercise.title,
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeSubtitle,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.foreground,
-                      ),
-                    ),
-                    AppConstants.gap4,
-                    Text(
-                      exercise.subtitle,
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeBody,
-                        color: AppTheme.mutedForeground,
-                      ),
-                    ),
-                    AppConstants.gap8,
-                    Text(
-                      ReliefCopy.minutesLabel(exercise.minutes),
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeCaption,
-                        color: AppTheme.mutedForeground,
-                      ),
-                    ),
-                    if (helped)
-                      const Text(
-                        ReliefCopy.helpedLabel,
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeCaption,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                    if (showDraft)
-                      const Text(
-                        ReliefCopy.draftMarker,
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeCaption,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.warning,
-                        ),
-                      ),
-                  ],
+    return BbCard(
+      onTap: () => context.push(RoutePaths.reliefExerciseFor(exercise.id)),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  exercise.title,
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeSubtitle,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.foreground,
+                  ),
                 ),
-              ),
-              const Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
-            ],
+                AppConstants.gap4,
+                Text(exercise.subtitle, style: AppTheme.bodyMutedStyle),
+                AppConstants.gap8,
+                Text(
+                  ReliefCopy.minutesLabel(exercise.minutes),
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeCaption,
+                    color: AppTheme.mutedForeground,
+                  ),
+                ),
+                if (helped)
+                  const Text(
+                    ReliefCopy.helpedLabel,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeCaption,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                if (showDraft)
+                  const Text(
+                    ReliefCopy.draftMarker,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeCaption,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.warning,
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
+          const Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
+        ],
       ),
     );
   }

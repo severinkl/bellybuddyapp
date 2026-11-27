@@ -16,31 +16,35 @@ class BreathPattern {
 
   int get cycleSeconds => inhale + holdIn + exhale + holdOut;
 
-  BreathPhase phaseAt(int secondInStep) {
-    var s = secondInStep % cycleSeconds;
-    for (final (phase, length) in _phases) {
-      if (s < length) return phase;
-      s -= length;
-    }
-    return BreathPhase.inhale;
-  }
+  BreathPhase phaseAt(int secondInStep) => phaseProgressAt(secondInStep).phase;
 
   /// Whole seconds left in the phase running at [secondInStep]; at least 1.
   int secondsLeftInPhase(int secondInStep) {
-    var s = secondInStep % cycleSeconds;
-    for (final (_, length) in _phases) {
-      if (s < length) return length - s;
-      s -= length;
-    }
-    return 1;
+    final at = phaseProgressAt(secondInStep);
+    return at.length - at.elapsed;
   }
 
-  List<(BreathPhase, int)> get _phases => [
-    (BreathPhase.inhale, inhale),
-    (BreathPhase.holdIn, holdIn),
-    (BreathPhase.exhale, exhale),
-    (BreathPhase.holdOut, holdOut),
-  ];
+  /// The phase running at [secondInStep], the seconds already spent in it
+  /// and its length.
+  ({BreathPhase phase, int elapsed, int length}) phaseProgressAt(
+    int secondInStep,
+  ) {
+    var s = secondInStep % cycleSeconds;
+    for (final phase in BreathPhase.values) {
+      final length = _lengthOf(phase);
+      if (s < length) return (phase: phase, elapsed: s, length: length);
+      s -= length;
+    }
+    // Unreachable for a positive cycle.
+    return (phase: BreathPhase.inhale, elapsed: 0, length: 1);
+  }
+
+  int _lengthOf(BreathPhase phase) => switch (phase) {
+    BreathPhase.inhale => inhale,
+    BreathPhase.holdIn => holdIn,
+    BreathPhase.exhale => exhale,
+    BreathPhase.holdOut => holdOut,
+  };
 }
 
 class ReliefStep {
@@ -77,12 +81,12 @@ class ReliefExercise {
   int get minutes => (totalSeconds / 60).round();
 }
 
-ReliefExercise? reliefExerciseById(String id) {
-  for (final e in reliefExercises) {
-    if (e.id == id) return e;
-  }
-  return null;
-}
+/// The exercise [id] in [exercises], or null.
+ReliefExercise? exerciseIn(List<ReliefExercise> exercises, String id) =>
+    exercises.where((e) => e.id == id).firstOrNull;
+
+ReliefExercise? reliefExerciseById(String id) =>
+    exerciseIn(reliefExercises, id);
 
 String breathPhaseLabel(BreathPhase p) => switch (p) {
   BreathPhase.inhale => 'Einatmen',
@@ -92,17 +96,10 @@ String breathPhaseLabel(BreathPhase p) => switch (p) {
 
 /// A number the safety sheet lets the user dial.
 class ReliefDial {
-  const ReliefDial({
-    required this.number,
-    required this.tel,
-    required this.caption,
-  });
+  const ReliefDial({required this.number, required this.caption});
 
   /// As shown, e.g. '116 117'.
   final String number;
-
-  /// For the `tel:` URI, e.g. '116117'.
-  final String tel;
 
   /// What follows the number, e.g. 'Rettung (Österreich, Schweiz)'.
   final String caption;
@@ -126,6 +123,9 @@ class ReliefCopy {
   static String stepOf(int n, int total) => 'Schritt $n von $total';
   static String minutesLabel(int m) => '$m Min.';
 
+  /// Semantics value of the player's progress bar, e.g. '40%'.
+  static String progressSemantics(double done) => '${(done * 100).round()}%';
+
   /// Semantics label of the pacer's phase container.
   static String phaseSemantics(String label, int secondsLeft) =>
       secondsLeft == 1
@@ -147,9 +147,6 @@ class ReliefCopy {
       'Das ersetzt keine ärztliche Hilfe. '
       'Bei starken Beschwerden: Notruf 144 (AT, CH) oder 112.';
   static const safetySheetTitle = 'Wann du Hilfe holen solltest';
-
-  /// The done view's link to the sheet.
-  static const safetyLinkLabel = safetySheetTitle;
 
   static const safetyIntro =
       'Die Übungen hier können dir helfen, ruhiger zu werden. '
@@ -174,22 +171,14 @@ class ReliefCopy {
 
   static const emergencyRowLabel = 'Notruf:';
   static const emergencyDials = [
-    ReliefDial(
-      number: '144',
-      tel: '144',
-      caption: 'Rettung (Österreich, Schweiz)',
-    ),
-    ReliefDial(
-      number: '112',
-      tel: '112',
-      caption: '(Deutschland und ganz Europa)',
-    ),
+    ReliefDial(number: '144', caption: 'Rettung (Österreich, Schweiz)'),
+    ReliefDial(number: '112', caption: '(Deutschland und ganz Europa)'),
   ];
 
   static const adviceRowLabel = 'Ärztlicher Rat, wenn es kein Notfall ist:';
   static const adviceDials = [
-    ReliefDial(number: '1450', tel: '1450', caption: '(Österreich)'),
-    ReliefDial(number: '116 117', tel: '116117', caption: '(Deutschland)'),
+    ReliefDial(number: '1450', caption: '(Österreich)'),
+    ReliefDial(number: '116 117', caption: '(Deutschland)'),
   ];
   static const adviceSwitzerland =
       'in der Schweiz deine Hausarztpraxis oder der ärztliche Notfalldienst '
@@ -197,7 +186,8 @@ class ReliefCopy {
 
   static String dialFailed(String number) => 'Wähl bitte direkt $number.';
 
-  /// Every plain string above, for the guard tests.
+  /// Every plain string above, for the guard tests. Add every new plain
+  /// const string here, or the vocabulary guard never sees it.
   static const allStrings = <String>[
     title,
     cardSubtitle,

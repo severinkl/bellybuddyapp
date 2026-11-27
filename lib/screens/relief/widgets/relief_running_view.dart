@@ -4,6 +4,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/relief_player_provider.dart';
 import '../../../services/relief/relief_content.dart';
+import '../../../widgets/common/bb_progress_bar.dart';
 import 'breath_pacer.dart';
 
 /// A running (or paused) exercise: „Schritt n von m", the total progress,
@@ -43,10 +44,14 @@ class ReliefRunningView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LinearProgressIndicator(
-          value: secondsDone / exercise.totalSeconds,
-          color: AppTheme.primary,
-          backgroundColor: AppTheme.primarySoft,
+        Semantics(
+          value: ReliefCopy.progressSemantics(
+            secondsDone / exercise.totalSeconds,
+          ),
+          child: BbProgressBar(
+            value: secondsDone / exercise.totalSeconds,
+            height: AppConstants.reliefProgressHeight,
+          ),
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -134,7 +139,7 @@ class _Controls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const minSize = Size(AppConstants.minTapTarget, AppConstants.minTapTarget);
+    const minSize = AppConstants.minTapSize;
     final back = OutlinedButton(
       onPressed: onBack,
       style: OutlinedButton.styleFrom(minimumSize: minSize),

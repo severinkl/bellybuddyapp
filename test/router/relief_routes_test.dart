@@ -21,7 +21,6 @@ Future<ProviderContainer> _pump(WidgetTester tester, {required bool on}) async {
     overrides: <Override>[
       ...baseOverrides(),
       reliefEnabledProvider.overrideWithValue(on),
-      reliefReviewMarkersProvider.overrideWithValue(false),
     ],
   );
   await tester.pumpWidget(

@@ -31,13 +31,13 @@ class BreathPacer extends StatefulWidget {
 
 /// How full the lungs are (0–1) at [second] of [pattern].
 double _breathFill(BreathPattern pattern, int second) {
-  var s = second % pattern.cycleSeconds;
-  if (s < pattern.inhale) return s / pattern.inhale;
-  s -= pattern.inhale;
-  if (s < pattern.holdIn) return 1;
-  s -= pattern.holdIn;
-  if (s < pattern.exhale) return 1 - s / pattern.exhale;
-  return 0;
+  final at = pattern.phaseProgressAt(second);
+  return switch (at.phase) {
+    BreathPhase.inhale => at.elapsed / at.length,
+    BreathPhase.holdIn => 1,
+    BreathPhase.exhale => 1 - at.elapsed / at.length,
+    BreathPhase.holdOut => 0,
+  };
 }
 
 class _BreathPacerState extends State<BreathPacer>

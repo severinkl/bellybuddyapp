@@ -20,6 +20,21 @@ class ReliefPlayerState {
   final int stepIndex;
   final int secondInStep;
 
+  /// In a step: running or paused.
+  bool get isActive =>
+      status == ReliefPlayerStatus.running ||
+      status == ReliefPlayerStatus.paused;
+
+  ReliefPlayerState copyWith({
+    ReliefPlayerStatus? status,
+    int? stepIndex,
+    int? secondInStep,
+  }) => ReliefPlayerState(
+    status: status ?? this.status,
+    stepIndex: stepIndex ?? this.stepIndex,
+    secondInStep: secondInStep ?? this.secondInStep,
+  );
+
   @override
   bool operator ==(Object other) =>
       other is ReliefPlayerState &&
@@ -62,10 +77,7 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
 
   @override
   ReliefPlayerState build() {
-    _exercise = null;
-    for (final e in ref.watch(reliefContentProvider)) {
-      if (e.id == exerciseId) _exercise = e;
-    }
+    _exercise = exerciseIn(ref.watch(reliefContentProvider), exerciseId);
     ref.onDispose(_stopTimer);
     return const ReliefPlayerState(
       status: ReliefPlayerStatus.ready,
@@ -109,34 +121,26 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
     if (state.status != ReliefPlayerStatus.running) return;
     _stopTimer();
     _baseSeconds = state.secondInStep;
-    state = ReliefPlayerState(
-      status: ReliefPlayerStatus.paused,
-      stepIndex: state.stepIndex,
-      secondInStep: _baseSeconds,
-    );
+    state = state.copyWith(status: ReliefPlayerStatus.paused);
   }
 
   void resume() {
     if (state.status != ReliefPlayerStatus.paused) return;
     _baseSeconds = state.secondInStep;
     _resumedAt = _now();
-    state = ReliefPlayerState(
-      status: ReliefPlayerStatus.running,
-      stepIndex: state.stepIndex,
-      secondInStep: _baseSeconds,
-    );
+    state = state.copyWith(status: ReliefPlayerStatus.running);
     _startTimer();
   }
 
   /// The next step at its start; on the last step finishes.
   void next() {
-    if (!_active) return;
+    if (!state.isActive) return;
     _goTo(state.stepIndex + 1);
   }
 
   /// The previous step at its start; on step 0 restarts it.
   void back() {
-    if (!_active) return;
+    if (!state.isActive) return;
     _goTo(state.stepIndex > 0 ? state.stepIndex - 1 : 0);
   }
 
@@ -156,10 +160,6 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
     if (state.status == ReliefPlayerStatus.running) _recompute();
   }
 
-  bool get _active =>
-      state.status == ReliefPlayerStatus.running ||
-      state.status == ReliefPlayerStatus.paused;
-
   /// Moves to [index] at second 0 keeping running/paused; past the end → done.
   void _goTo(int index) {
     if (index >= exercise.steps.length) {
@@ -168,11 +168,7 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
     }
     if (state.status == ReliefPlayerStatus.paused) {
       _baseSeconds = 0;
-      state = ReliefPlayerState(
-        status: ReliefPlayerStatus.paused,
-        stepIndex: index,
-        secondInStep: 0,
-      );
+      state = state.copyWith(stepIndex: index, secondInStep: 0);
     } else {
       _runStep(index);
     }
@@ -218,21 +214,13 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
       if (_hidden) {
         // Hold at the end; appShown moves on.
         _stopTimer();
-        state = ReliefPlayerState(
-          status: ReliefPlayerStatus.running,
-          stepIndex: state.stepIndex,
-          secondInStep: step.seconds,
-        );
+        state = state.copyWith(secondInStep: step.seconds);
         return;
       }
       _goTo(state.stepIndex + 1);
       return;
     }
-    state = ReliefPlayerState(
-      status: ReliefPlayerStatus.running,
-      stepIndex: state.stepIndex,
-      secondInStep: second,
-    );
+    state = state.copyWith(secondInStep: second);
   }
 
   void _startTimer() {

@@ -23,6 +23,7 @@ class _RouterRefreshNotifier extends ChangeNotifier {
     ref.listen(healthConsentRequiredProvider, (_, _) => notifyListeners());
     ref.listen(buddyOnboardingRequiredProvider, (_, _) => notifyListeners());
     ref.listen(buddyOnboardingGatePendingProvider, (_, _) => notifyListeners());
+    ref.listen(reliefEnabledProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -110,6 +111,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         location: state.uri,
       );
       if (buddyRedirect != null) return buddyRedirect;
+
+      // Ruhe für den Bauch is invisible while its gate is off; never behind
+      // the paywall.
+      final isRelief =
+          path == RoutePaths.relief || path.startsWith('${RoutePaths.relief}/');
+      if (isRelief && !ref.read(reliefEnabledProvider)) {
+        return RoutePaths.discover;
+      }
 
       // Authenticated on auth route → dashboard
       // NOTE: /registration is NOT in isAuthRoute — user stays there to finish
@@ -309,22 +318,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.patternsUnlocked,
         builder: (context, state) => const PatternsUnlockedScreen(),
       ),
-      // Ruhe für den Bauch. Invisible while the gate is off; never behind
-      // the paywall.
+      // Ruhe für den Bauch; the global redirect gates it.
       GoRoute(
         path: RoutePaths.relief,
         name: RouteNames.relief,
-        redirect: (context, state) =>
-            ref.read(reliefEnabledProvider) ? null : RoutePaths.discover,
         builder: (context, state) => const ReliefListScreen(),
       ),
       GoRoute(
         path: RoutePaths.reliefExercise,
         name: RouteNames.reliefExercise,
         redirect: (context, state) {
-          if (!ref.read(reliefEnabledProvider)) return RoutePaths.discover;
           final id = state.pathParameters['id']!;
-          return reliefExerciseById(id) == null ? RoutePaths.relief : null;
+          final known = exerciseIn(ref.read(reliefContentProvider), id);
+          return known == null ? RoutePaths.relief : null;
         },
         builder: (context, state) =>
             ReliefPlayerScreen(exerciseId: state.pathParameters['id']!),
