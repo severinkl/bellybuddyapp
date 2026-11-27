@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
+import 'package:belly_buddy/services/share_secrets_store.dart';
 
 import '../helpers/mocks.dart';
 import '../helpers/riverpod_helpers.dart';
@@ -204,4 +207,112 @@ void main() {
       expect(result, isNull);
     });
   });
+
+  group('share secrets', () {
+    const secret = ShareSecret(link: 'l', code: '123456');
+
+    Future<ProviderContainer> containerWithSecret([
+      ShareSecretsStore? override,
+    ]) async {
+      SharedPreferences.setMockInitialValues({});
+      final store = ShareSecretsStore(userId: () => 'u1');
+      await store.save('s1', secret);
+      return createContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(mockRepo),
+          currentUserIdProvider.overrideWithValue('u1'),
+          shareSecretsStoreProvider.overrideWithValue(override ?? store),
+        ],
+      );
+    }
+
+    Future<bool> kept(ProviderContainer c) async =>
+        await ShareSecretsStore(userId: () => 'u1').read('s1') != null;
+
+    test('are cleared after a successful sign-out', () async {
+      when(() => mockRepo.signOut()).thenAnswer((_) async {});
+      final container = await containerWithSecret();
+      await container.read(authNotifierProvider.notifier).signOut();
+      expect(await kept(container), isFalse);
+    });
+
+    test('are cleared after a successful account deletion', () async {
+      when(() => mockRepo.deleteAccount()).thenAnswer((_) async {});
+      final container = await containerWithSecret();
+      await container.read(authNotifierProvider.notifier).deleteAccount();
+      expect(await kept(container), isFalse);
+    });
+
+    // Still signed in on this device after a failure.
+    const signedIn = User(
+      id: 'u1',
+      appMetadata: {},
+      userMetadata: {},
+      aud: 'authenticated',
+      createdAt: '2026-01-01T00:00:00Z',
+    );
+
+    test('survive a failed sign-out', () async {
+      when(() => mockRepo.currentUser).thenReturn(signedIn);
+      when(() => mockRepo.signOut()).thenThrow(Exception('offline'));
+      final container = await containerWithSecret();
+      await expectLater(
+        container.read(authNotifierProvider.notifier).signOut(),
+        throwsA(isA<Exception>()),
+      );
+      expect(await kept(container), isTrue);
+    });
+
+    test('survive a failed account deletion', () async {
+      when(() => mockRepo.currentUser).thenReturn(signedIn);
+      when(() => mockRepo.deleteAccount()).thenThrow(Exception('offline'));
+      final container = await containerWithSecret();
+      await expectLater(
+        container.read(authNotifierProvider.notifier).deleteAccount(),
+        throwsA(isA<Exception>()),
+      );
+      expect(await kept(container), isTrue);
+    });
+
+    test('are cleared when the sign-out signed out locally but the server '
+        'call failed', () async {
+      // gotrue drops the local session first, then calls the server.
+      when(() => mockRepo.currentUser).thenReturn(null);
+      when(() => mockRepo.signOut()).thenThrow(Exception('offline'));
+      final container = await containerWithSecret();
+      await expectLater(
+        container.read(authNotifierProvider.notifier).signOut(),
+        throwsA(isA<Exception>()),
+      );
+      expect(await kept(container), isFalse);
+    });
+
+    test(
+      'are cleared when the account deletion failed after signing out',
+      () async {
+        when(() => mockRepo.currentUser).thenReturn(null);
+        when(() => mockRepo.deleteAccount()).thenThrow(Exception('offline'));
+        final container = await containerWithSecret();
+        await expectLater(
+          container.read(authNotifierProvider.notifier).deleteAccount(),
+          throwsA(isA<Exception>()),
+        );
+        expect(await kept(container), isFalse);
+      },
+    );
+
+    test('a failing clear does not fail a successful sign-out', () async {
+      when(() => mockRepo.signOut()).thenAnswer((_) async {});
+      final container = await containerWithSecret(_FailingStore());
+      await container.read(authNotifierProvider.notifier).signOut();
+      expect(container.read(authNotifierProvider), isA<AsyncData<void>>());
+    });
+  });
+}
+
+class _FailingStore extends ShareSecretsStore {
+  _FailingStore() : super(userId: () => 'u1');
+
+  @override
+  Future<void> clearFor(String userId) async => throw Exception('disk');
 }
