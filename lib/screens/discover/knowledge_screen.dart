@@ -131,11 +131,14 @@ class _KnowledgeScreenState extends ConsumerState<KnowledgeScreen> {
                 reason: p.reason,
                 onTap: () => unawaited(_open(p.article)),
               ),
-            AppConstants.gap16,
-            const _Label(KnowledgeScreen.allArticlesTitle),
-            AppConstants.gap8,
+            // Every article a pick: nothing more below them.
+            if (articles.isNotEmpty) ...[
+              AppConstants.gap16,
+              const _Label(KnowledgeScreen.allArticlesTitle),
+              AppConstants.gap8,
+            ],
           ],
-          if (articles.isEmpty)
+          if (articles.isEmpty && picks.isEmpty)
             const Padding(
               padding: AppConstants.paddingLg,
               child: Text(

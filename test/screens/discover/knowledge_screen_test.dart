@@ -238,6 +238,18 @@ void main() {
       );
     });
 
+    testWidgets('every article a pick: no Alle Artikel, no empty line', (
+      tester,
+    ) async {
+      repo = FakeKnowledgeRepository(articles: [laktose]);
+      await pump(tester, intolerances: const ['Laktose']);
+
+      expect(find.text(KnowledgeScreen.forYouTitle), findsOneWidget);
+      expect(titles(tester), ['Laktose im Alltag']);
+      expect(find.text(KnowledgeScreen.allArticlesTitle), findsNothing);
+      expect(find.text('Gerade keine Artikel.'), findsNothing);
+    });
+
     testWidgets('another chip hides Für dich', (tester) async {
       repo = FakeKnowledgeRepository(
         articles: [...testKnowledgeArticles(), laktose],
