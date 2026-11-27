@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
+import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/meal_tracker_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
@@ -415,8 +417,12 @@ void main() {
         ),
       ).thenAnswer((_) async {});
 
-      // triggerSuggestionRefresh is void (fire-and-forget)
-      when(() => mockMealMediaRepo.triggerSuggestionRefresh()).thenReturn(null);
+      when(
+        () => mockMealMediaRepo.refreshSuggestions(),
+      ).thenAnswer((_) async => 0);
+      when(
+        () => mockIngredientRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => []);
 
       final container = makeContainer();
       final notifier = container.read(mealTrackerProvider.notifier);
@@ -448,7 +454,12 @@ void main() {
         ),
       ).thenAnswer((_) async {});
 
-      when(() => mockMealMediaRepo.triggerSuggestionRefresh()).thenReturn(null);
+      when(
+        () => mockMealMediaRepo.refreshSuggestions(),
+      ).thenAnswer((_) async => 0);
+      when(
+        () => mockIngredientRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => []);
 
       final container = makeContainer();
       await container.read(mealTrackerProvider.notifier).save();
@@ -465,21 +476,119 @@ void main() {
       ).called(1);
     });
 
-    test('calls triggerSuggestionRefresh after save', () async {
-      when(
-        () => mockEntryRepo.insertEntry(
-          any(),
-          any(),
-          userId: any(named: 'userId'),
-        ),
-      ).thenAnswer((_) async {});
+    void stubInsert() => when(
+      () =>
+          mockEntryRepo.insertEntry(any(), any(), userId: any(named: 'userId')),
+    ).thenAnswer((_) async {});
 
-      when(() => mockMealMediaRepo.triggerSuggestionRefresh()).thenReturn(null);
+    test('save: refreshSuggestions is called once, then fetchSuggestions once '
+        'it completes', () async {
+      stubInsert();
+      final refresh = Completer<int>();
+      when(
+        () => mockMealMediaRepo.refreshSuggestions(),
+      ).thenAnswer((_) => refresh.future);
+      when(
+        () => mockIngredientRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => []);
 
       final container = makeContainer();
       await container.read(mealTrackerProvider.notifier).save();
 
-      verify(() => mockMealMediaRepo.triggerSuggestionRefresh()).called(1);
+      // The success screen does not wait for the refresh.
+      expect(container.read(mealTrackerProvider).showSuccess, isTrue);
+      verify(() => mockMealMediaRepo.refreshSuggestions()).called(1);
+      verifyNever(() => mockIngredientRepo.fetchSuggestionGroups(any()));
+
+      refresh.complete(0);
+      await pumpEventQueue();
+
+      verify(
+        () => mockIngredientRepo.fetchSuggestionGroups(testUserId),
+      ).called(1);
+    });
+
+    test('the suggestions are rebuilt during the refresh (sign-out): the '
+        'refetch goes to the new notifier', () async {
+      stubInsert();
+      final refresh = Completer<int>();
+      when(
+        () => mockMealMediaRepo.refreshSuggestions(),
+      ).thenAnswer((_) => refresh.future);
+      when(
+        () => mockIngredientRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => []);
+
+      final container = makeContainer();
+      container.read(ingredientSuggestionProvider);
+      await container.read(mealTrackerProvider.notifier).save();
+      container.invalidate(ingredientSuggestionProvider);
+
+      refresh.complete(0);
+      await pumpEventQueue();
+
+      verify(
+        () => mockIngredientRepo.fetchSuggestionGroups(testUserId),
+      ).called(1);
+      expect(container.read(ingredientSuggestionProvider).value, isEmpty);
+    });
+
+    test(
+      'refreshSuggestions throws: logged, the success state is set, no fetch',
+      () async {
+        stubInsert();
+        when(
+          () => mockMealMediaRepo.refreshSuggestions(),
+        ).thenAnswer((_) async => throw Exception('offline'));
+
+        final container = makeContainer();
+        await container.read(mealTrackerProvider.notifier).save();
+        await pumpEventQueue();
+
+        final state = container.read(mealTrackerProvider);
+        expect(state.showSuccess, isTrue);
+        expect(state.isSaving, isFalse);
+        verify(() => mockMealMediaRepo.refreshSuggestions()).called(1);
+        verifyNever(() => mockIngredientRepo.fetchSuggestionGroups(any()));
+      },
+    );
+
+    test('create mode stores savedMealId; edit mode does not', () async {
+      stubInsert();
+      when(
+        () => mockMealMediaRepo.refreshSuggestions(),
+      ).thenAnswer((_) async => 0);
+      when(
+        () => mockIngredientRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => []);
+
+      final created = makeContainer();
+      await created.read(mealTrackerProvider.notifier).save();
+      final inserted = verify(
+        () => mockEntryRepo.insertEntry(
+          captureAny(),
+          captureAny(),
+          userId: testUserId,
+        ),
+      ).captured.whereType<Map<String, dynamic>>().single;
+      expect(created.read(mealTrackerProvider).savedMealId, inserted['id']);
+
+      final edited = createContainer(
+        overrides: [
+          entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+          mealMediaRepositoryProvider.overrideWithValue(
+            FakeMealMediaRepository(),
+          ),
+          ingredientRepositoryProvider.overrideWithValue(
+            FakeIngredientRepository(),
+          ),
+          currentUserIdProvider.overrideWithValue(testUserId),
+        ],
+      );
+      final notifier = edited.read(mealTrackerProvider.notifier)
+        ..seed(testMealEntry(id: 'meal-42'));
+      await notifier.save();
+      expect(edited.read(mealTrackerProvider).savedMealId, isNull);
     });
   });
 

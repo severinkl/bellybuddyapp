@@ -8,6 +8,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'config/app_localizations.dart';
 import 'config/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/daily_review_reminder_provider.dart';
 import 'providers/diary_provider.dart';
 import 'providers/discover_news_provider.dart';
 import 'providers/entries_provider.dart';
@@ -128,6 +129,7 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
 
     // Activate notification sync provider
     ref.watch(notificationSyncProvider);
+    ref.watch(dailyReviewReminderSyncProvider);
     // Keeps the tips and the Alternativen loaded (sign-in, foreground).
     ref.watch(discoverNewsProvider);
 

@@ -8,6 +8,7 @@ import '../../../models/meal_prefill.dart';
 import '../../../models/user_recipe.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/ingredient_autocomplete_provider.dart';
+import '../../../providers/ingredient_suggestion_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
 import '../../../providers/user_recipes_provider.dart';
 import '../../../router/navigation_extensions.dart';
@@ -22,6 +23,7 @@ import '../../../widgets/common/bb_success_overlay.dart' show BbPillAction;
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/editable_app_bar_title.dart';
+import '../../../widgets/common/flagged_ingredients_line.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 import '../../../widgets/common/ingredient_search.dart';
 import '../entry_logger.dart';
@@ -230,6 +232,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen>
             ? null
             : LogSuccessHero(moment: moment, foodImageBytes: state.imageBytes),
         successActions: [
+          ?_flaggedIngredients(state.savedMealId),
           BbPillAction(
             shrinkWrap: true,
             onTap: () => _logDrinkAfterMeal(state.trackedAt),
@@ -255,6 +258,22 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen>
             : null,
         onSuccessDismissed: _dismissSuccess,
         body: _buildBody(state),
+      ),
+    );
+  }
+
+  /// The quiet line naming the just-saved meal's flagged ingredients, once
+  /// they arrive; nothing before (no spinner, no placeholder).
+  Widget? _flaggedIngredients(String? mealId) {
+    if (mealId == null) return null;
+    final groups = ref.watch(mealSuggestionGroupsProvider(mealId));
+    if (groups.isEmpty) return null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppConstants.spacingSm),
+      child: FlaggedIngredientsLine(
+        names: [for (final g in groups) g.ingredientName],
+        onOpen: () => context.push(RoutePaths.ingredientSuggestions),
+        centered: true,
       ),
     );
   }

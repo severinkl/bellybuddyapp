@@ -103,6 +103,14 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
     }
   }
 
+  /// Saves [change] applied to the latest loaded profile (not to one read
+  /// earlier), through [updateProfile]; nothing while none is loaded.
+  Future<void> updateWith(UserProfile Function(UserProfile) change) async {
+    final latest = state.value;
+    if (latest == null) return;
+    await updateProfile(change(latest));
+  }
+
   /// [profile] with the weekly-tips switch as it stands: the loaded
   /// profile's, else (mid-fetch) the one a switch still writing set.
   UserProfile _keepSwitch(UserProfile profile) {

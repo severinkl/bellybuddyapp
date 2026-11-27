@@ -230,11 +230,14 @@ void main() {
         ],
       );
       when(() => fb.inFilter(any(), any())).thenAnswer((_) => fb);
+      when(() => fb.order(any())).thenAnswer((_) => fb);
 
       final result = await service.fetchReplacements(['sug-1', 'sug-2']);
 
       expect(result, hasLength(1));
       verify(() => fb.inFilter('suggestion_id', ['sug-1', 'sug-2'])).called(1);
+      // Rows of one transaction share created_at: id breaks the tie.
+      verifyInOrder([() => fb.order('created_at'), () => fb.order('id')]);
     });
   });
 

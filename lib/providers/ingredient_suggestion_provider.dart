@@ -124,3 +124,18 @@ final newIngredientSuggestionCountProvider = Provider<int>((ref) {
   final groups = ref.watch(ingredientSuggestionProvider).value ?? const [];
   return groups.where((g) => g.isNew).length;
 });
+
+/// The suggestion groups that contain [mealId], by ingredient name; empty
+/// while loading or failed.
+final mealSuggestionGroupsProvider = Provider.autoDispose
+    .family<List<IngredientSuggestionGroup>, String>((ref, mealId) {
+      final groups = ref.watch(ingredientSuggestionProvider).value ?? const [];
+      return [
+        for (final g in groups)
+          if (g.meals.any((m) => m.id == mealId)) g,
+      ]..sort(
+        (a, b) => a.ingredientName.toLowerCase().compareTo(
+          b.ingredientName.toLowerCase(),
+        ),
+      );
+    });
