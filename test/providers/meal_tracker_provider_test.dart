@@ -9,6 +9,7 @@ import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
+import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/meal_tracker_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
@@ -505,6 +506,31 @@ void main() {
       verify(
         () => mockIngredientRepo.fetchSuggestionGroups(testUserId),
       ).called(1);
+    });
+
+    test('the suggestions are rebuilt during the refresh (sign-out): the '
+        'refetch goes to the new notifier', () async {
+      stubInsert();
+      final refresh = Completer<int>();
+      when(
+        () => mockMealMediaRepo.refreshSuggestions(),
+      ).thenAnswer((_) => refresh.future);
+      when(
+        () => mockIngredientRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => []);
+
+      final container = makeContainer();
+      container.read(ingredientSuggestionProvider);
+      await container.read(mealTrackerProvider.notifier).save();
+      container.invalidate(ingredientSuggestionProvider);
+
+      refresh.complete(0);
+      await pumpEventQueue();
+
+      verify(
+        () => mockIngredientRepo.fetchSuggestionGroups(testUserId),
+      ).called(1);
+      expect(container.read(ingredientSuggestionProvider).value, isEmpty);
     });
 
     test(

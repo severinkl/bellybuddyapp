@@ -295,11 +295,17 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   /// success screen and the diary show the meal's flagged ingredients.
   /// Never blocks the save; a failure is only logged.
   void _refreshSuggestions() {
-    final suggestions = ref.read(ingredientSuggestionProvider.notifier);
     ref
         .read(mealMediaRepositoryProvider)
         .refreshSuggestions()
-        .then((_) => suggestions.fetchSuggestions())
+        // Read after the (long) wait: the suggestions may have been rebuilt
+        // (a sign-out) meanwhile.
+        .then((_) async {
+          if (!ref.mounted) return;
+          await ref
+              .read(ingredientSuggestionProvider.notifier)
+              .fetchSuggestions();
+        })
         .catchError((Object e, StackTrace st) {
           _log.error('refreshSuggestions failed', e, st);
         });
