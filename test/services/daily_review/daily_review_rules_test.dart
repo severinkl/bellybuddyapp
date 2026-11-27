@@ -4,6 +4,7 @@ import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/services/daily_review/daily_review_rules.dart';
 import 'package:belly_buddy/utils/gut_feeling_rating.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _t = 19 * 60 + 30;
@@ -24,8 +25,9 @@ GutFeelingEntry _gut(String id, DateTime at, int v) => GutFeelingEntry(
   fullness: 1,
 );
 
+/// `tracked_at` as production reads it: the wall clock sent in the UTC slot.
 DateTime _wall(int y, int m, int d, [int h = 12, int min = 0]) =>
-    DateTime.utc(y, m, d, h, min);
+    wallClockFromWire(DateTime.utc(y, m, d, h, min).toIso8601String());
 
 MealDetail _md(String id, DateTime at) =>
     MealDetail(id: id, title: id, trackedAt: at);
@@ -129,6 +131,71 @@ void main() {
         expect(r.lastGut, GutFeelingRatingLevel.spiGut);
       },
     );
+  });
+
+  group('buildDailyReview wiring', () {
+    final today = _md('today', _wall(2026, 11, 26, 12));
+    final other = _md('other-day', _wall(2026, 11, 25, 12));
+    final meals = [
+      _meal('today', _wall(2026, 11, 26, 12)),
+      _meal('other-day', _wall(2026, 11, 25, 12)),
+    ];
+
+    DailyReview review({
+      List<IngredientSuggestionGroup>? groups,
+      bool locked = false,
+      bool pending = false,
+      List<DailyReviewLine> extras = const [],
+    }) => buildDailyReview(
+      day: ReviewDay(_day, yesterday: false),
+      meals: meals,
+      gutFeelings: const [],
+      groups:
+          groups ??
+          [
+            _group('a', [today]),
+          ],
+      chosen: const {},
+      alternativeLocked: locked,
+      alternativePending: pending,
+      extras: extras,
+    )!;
+
+    test('only the review day\'s meals count and pick', () {
+      expect(review().meals, 1);
+      // A group only on the other day's meal: no pick.
+      expect(
+        review(
+          groups: [
+            _group('b', [other]),
+          ],
+        ).alternative,
+        isNull,
+      );
+      expect(review().alternative!.group.ingredientId, 'a');
+    });
+
+    test('alternativeLocked and extras pass through; locked keeps the '
+        'pick', () {
+      const extras = [DailyReviewLine('x', route: '/x')];
+      final r = review(locked: true, extras: extras);
+      expect(r.alternativeLocked, isTrue);
+      expect(r.extras, same(extras));
+      expect(r.alternative, isNotNull);
+      expect(review().alternativeLocked, isFalse);
+    });
+
+    test('no groups → no pick, not pending', () {
+      final r = review(groups: const []);
+      expect(r.alternative, isNull);
+      expect(r.alternativePending, isFalse);
+    });
+
+    test('pending → no pick yet, though there is one', () {
+      final r = review(pending: true);
+      expect(r.alternative, isNull);
+      expect(r.alternativePending, isTrue);
+    });
   });
 
   group('pickAlternative', () {

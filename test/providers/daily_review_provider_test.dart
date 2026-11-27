@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:belly_buddy/models/alternative_choice.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
@@ -13,6 +16,8 @@ import 'package:belly_buddy/providers/minute_provider.dart';
 import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/services/daily_review/daily_review_rules.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,9 +31,10 @@ final _yesterday = DateTime(2026, 11, 26);
 DateTime _at(DateTime day, int h, [int m = 0]) =>
     DateTime(day.year, day.month, day.day, h, m);
 
-/// Wall clock in the UTC slot, as `tracked_at` is read.
-DateTime _wall(DateTime day, int h) =>
-    DateTime.utc(day.year, day.month, day.day, h);
+/// `tracked_at` as production reads it: the wall clock sent in the UTC slot.
+DateTime _wall(DateTime day, int h) => wallClockFromWire(
+  DateTime.utc(day.year, day.month, day.day, h).toIso8601String(),
+);
 
 MealEntry _meal(String id, DateTime day) =>
     testMealEntry(id: id, trackedAt: _wall(day, 12));
@@ -52,8 +58,19 @@ IngredientSuggestionGroup _group(String mealId, DateTime day) =>
       meals: [MealDetail(id: mealId, title: mealId, trackedAt: _wall(day, 12))],
       replacements: const [
         ReplacementIngredient(id: 'chive', name: 'Schnittlauch'),
+        ReplacementIngredient(id: 'leek', name: 'Lauchgrün'),
       ],
     );
+
+AlternativeChoice _choice(String replacementId) => AlternativeChoice(
+  id: 'c-$replacementId',
+  ingredientId: 'onion',
+  ingredientName: 'Zwiebel',
+  replacementId: replacementId,
+  replacementName: replacementId,
+  kind: AlternativeChoiceKind.skip,
+  createdAt: DateTime.utc(2026, 11, 20),
+);
 
 class _Minute extends MinuteNotifier {
   _Minute(this._initial);
@@ -81,6 +98,23 @@ class _Entries extends EntriesNotifier {
 
   @override
   EntriesState build() => _initial;
+
+  void set(EntriesState s) => state = s;
+}
+
+/// The choices as given; loading until [set] while [_initial] is loading.
+class _Choices extends AlternativeChoicesNotifier {
+  _Choices(this._initial);
+  final AsyncValue<List<AlternativeChoice>> _initial;
+
+  @override
+  Future<List<AlternativeChoice>> build() => switch (_initial) {
+    AsyncData(:final value) => Future.value(value),
+    AsyncError(:final error) => Future.error(error),
+    _ => Completer<List<AlternativeChoice>>().future,
+  };
+
+  void set(AsyncValue<List<AlternativeChoice>> v) => state = v;
 }
 
 class _Suggestions extends IngredientSuggestionNotifier {
@@ -105,6 +139,7 @@ void main() {
     List<MealEntry> diaryMeals = const [],
     UserProfile? profile,
     AsyncValue<List<IngredientSuggestionGroup>> groups = const AsyncData([]),
+    AsyncValue<List<AlternativeChoice>> choices = const AsyncData([]),
     bool onboarding = false,
     bool plusLocked = false,
     bool? seamLocked,
@@ -130,7 +165,7 @@ void main() {
           ],
         ),
         ingredientSuggestionProvider.overrideWith(() => _Suggestions(groups)),
-        chosenAlternativesProvider.overrideWithValue(const {}),
+        alternativeChoicesProvider.overrideWith(() => _Choices(choices)),
         buddyOnboardingRequiredProvider.overrideWithValue(onboarding),
         plusLockedProvider.overrideWithValue(plusLocked),
         if (seamLocked != null)
@@ -141,9 +176,10 @@ void main() {
     return c;
   }
 
-  /// Lets the prefs read and the diary fetch land.
+  /// Lets the prefs read, the choices and the diary fetch land.
   Future<void> settle(ProviderContainer c) async {
     await c.read(dailyReviewClosedProvider.future);
+    await Future<void>.delayed(Duration.zero);
     await Future<void>.delayed(Duration.zero);
   }
 
@@ -261,8 +297,8 @@ void main() {
     expect(c.read(dailyReviewProvider), isNotNull);
   });
 
-  test('groups still loading → review with alternative null; groups arrive → '
-      'alternative set', () async {
+  test('groups still loading → review pending, alternative null; groups '
+      'arrive → alternative set', () async {
     final c = container(
       now: _at(_today, 20),
       todayMeals: [_meal('m1', _today)],
@@ -271,6 +307,7 @@ void main() {
     await settle(c);
     final loading = c.read(dailyReviewProvider)!;
     expect(loading.alternative, isNull);
+    expect(loading.alternativePending, isTrue);
 
     (c.read(ingredientSuggestionProvider.notifier) as _Suggestions).set(
       AsyncData([_group('m1', _today)]),
@@ -278,6 +315,113 @@ void main() {
     final arrived = c.read(dailyReviewProvider)!;
     expect(arrived.alternative?.replacement.id, 'chive');
     expect(arrived.alternativeLocked, isFalse);
+    expect(arrived.alternativePending, isFalse);
+  });
+
+  test('groups loaded empty or failed → not pending, no pick (the neutral '
+      'line)', () async {
+    final c = container(
+      now: _at(_today, 20),
+      todayMeals: [_meal('m1', _today)],
+    );
+    await settle(c);
+    expect(c.read(dailyReviewProvider)!.alternativePending, isFalse);
+
+    (c.read(ingredientSuggestionProvider.notifier) as _Suggestions).set(
+      AsyncError(Exception('offline'), StackTrace.empty),
+    );
+    final failed = c.read(dailyReviewProvider)!;
+    expect(failed.alternativePending, isFalse);
+    expect(failed.alternative, isNull);
+  });
+
+  test('choices loading → no pick shown; loaded → the pick skips the chosen '
+      'pair', () async {
+    final c = container(
+      now: _at(_today, 20),
+      todayMeals: [_meal('m1', _today)],
+      groups: AsyncData([_group('m1', _today)]),
+      choices: const AsyncLoading(),
+    );
+    await settle(c);
+    final loading = c.read(dailyReviewProvider)!;
+    expect(loading.alternativePending, isTrue);
+    expect(loading.alternative, isNull);
+
+    (c.read(alternativeChoicesProvider.notifier) as _Choices).set(
+      AsyncData([_choice('chive')]),
+    );
+    final loaded = c.read(dailyReviewProvider)!;
+    expect(loaded.alternativePending, isFalse);
+    expect(loaded.alternative?.replacement.id, 'leek');
+  });
+
+  test('choices failed → not pending, the pick from no choices', () async {
+    final c = container(
+      now: _at(_today, 20),
+      todayMeals: [_meal('m1', _today)],
+      groups: AsyncData([_group('m1', _today)]),
+      choices: AsyncError(Exception('offline'), StackTrace.empty),
+    );
+    await settle(c);
+    final review = c.read(dailyReviewProvider)!;
+    expect(review.alternativePending, isFalse);
+    expect(review.alternative?.replacement.id, 'chive');
+  });
+
+  test('locked without groups (no analysis without Plus) → alternativeLocked, '
+      'no pick, not pending', () async {
+    final c = container(
+      now: _at(_today, 20),
+      todayMeals: [_meal('m1', _today)],
+      plusLocked: true,
+    );
+    await settle(c);
+    final review = c.read(dailyReviewProvider)!;
+    expect(review.alternativeLocked, isTrue);
+    expect(review.alternative, isNull);
+    expect(review.alternativePending, isFalse);
+  });
+
+  test('midnight hand-over: entries move on to today, the diary of yesterday '
+      'takes over', () async {
+    final meal = _meal('m1', _yesterday);
+    final c = container(
+      now: _at(_yesterday, 23, 59),
+      entriesDay: _yesterday,
+      todayMeals: [meal],
+      diaryMeals: [meal],
+    );
+    await settle(c);
+    expect(c.read(dailyReviewProvider)!.day.yesterday, isFalse);
+
+    tick(c, _at(_today, 0));
+    // Home loads today: the entries hold today (no meal yet).
+    (c.read(entriesProvider.notifier) as _Entries).set(
+      EntriesState(meals: const [], day: _today),
+    );
+    await settle(c);
+    final after = c.read(dailyReviewProvider)!;
+    expect(after.day, ReviewDay(_yesterday, yesterday: true));
+    expect(after.meals, 1);
+  });
+
+  test('the minute ticks with nothing else changing: listeners stay '
+      'quiet', () async {
+    final c = container(
+      now: _at(_today, 20),
+      todayMeals: [_meal('m1', _today)],
+      groups: AsyncData([_group('m1', _today)]),
+    );
+    await settle(c);
+    var heard = 0;
+    c.listen(dailyReviewProvider, (_, _) => heard++);
+    for (final m in [1, 2, 3]) {
+      tick(c, _at(_today, 20, m));
+      c.read(dailyReviewProvider);
+    }
+    await settle(c);
+    expect(heard, 0);
   });
 
   test('dailyReviewAlternativeLockedProvider overridden true → '

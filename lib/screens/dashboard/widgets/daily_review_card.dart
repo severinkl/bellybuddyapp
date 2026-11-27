@@ -22,7 +22,8 @@ import '../../../widgets/common/bb_card.dart';
 /// Home's daily review ([dailyReviewProvider]), spec §4.3: the title with
 /// „×", the day (meals, the last gut feeling or the ask to log one), the
 /// extras, then the alternative („Probiere ich" / „Passt nicht für mich"),
-/// the neutral line, or — locked — the hint without names.
+/// the neutral line, or — locked — the hint without names (with a pick)
+/// or the Plus line (without one); nothing of it while it still loads.
 ///
 /// Nothing while there is no review. Each time it becomes visible (a Home
 /// visit: `TickerMode` on) it refreshes the suggestions, so the last meal's
@@ -163,6 +164,8 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
         },
     ];
 
+    final alternative = _alternative(review, upsellRoute, line, textButton);
+
     return BbCard(
       key: DailyReviewCard.cardKey,
       color: AppTheme.beige,
@@ -208,8 +211,10 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
               children: [
                 ...day,
                 if (extras.isNotEmpty) ...[AppConstants.gap8, ...extras],
-                AppConstants.gap12,
-                ..._alternative(review, upsellRoute, line, textButton),
+                if (alternative.isNotEmpty) ...[
+                  AppConstants.gap12,
+                  ...alternative,
+                ],
               ],
             ),
           ),
@@ -236,10 +241,15 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
       ];
     }
     final pick = _pending ?? review.alternative;
-    if (pick == null) return [line(DailyReviewCopy.none(yesterday: yesterday))];
+    // Still loading: nothing yet, no claim to take back.
+    if (pick == null && review.alternativePending) return const [];
     if (review.alternativeLocked) {
       return [
-        line(DailyReviewCopy.locked),
+        line(
+          pick == null
+              ? DailyReviewCopy.lockedNoPick
+              : DailyReviewCopy.locked(yesterday: yesterday),
+        ),
         if (upsellRoute != null)
           textButton(
             DailyReviewCard.upsellKey,
@@ -248,6 +258,7 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
           ),
       ];
     }
+    if (pick == null) return [line(DailyReviewCopy.none(yesterday: yesterday))];
     final busy = _pending != null;
     return [
       line(

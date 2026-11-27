@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
+import '../../services/daily_review/daily_review_copy.dart';
 
 /// The quiet line after a meal: which of its ingredients could trouble the
 /// belly, with a link to the Alternativen. Free; the Alternativen gate
@@ -57,7 +58,7 @@ class FlaggedIngredientsLine extends StatelessWidget {
           key: openKey,
           onPressed: onOpen,
           style: TextButton.styleFrom(foregroundColor: AppTheme.foreground),
-          child: const Text('Alternativen ansehen ›'),
+          child: const Text(DailyReviewCopy.viewAlternatives),
         ),
       ],
     );

@@ -39,20 +39,34 @@ abstract final class DailyReviewCopy {
       ? 'Für heute hab ich keine Alternative für dich.'
       : 'Für morgen hab ich keine Alternative für dich. Genieß deinen Abend!';
 
-  static const String locked =
-      'Für morgen hätte ich eine Alternative für dich.';
+  /// Locked, with a pick: names hidden.
+  static String locked({required bool yesterday}) =>
+      'Für ${yesterday ? 'heute' : 'morgen'} hätte ich eine Alternative '
+      'für dich.';
+
+  /// Locked, without a pick (no analysis without Plus): claims none.
+  static const String lockedNoPick =
+      'Mit Belly Buddy Plus schaue ich jeden Abend nach einer Alternative '
+      'für dich.';
   static const String upsell = 'Mehr erfahren';
   static const String failed =
       'Das hat nicht geklappt. Versuch es später noch einmal.';
   static const String close = 'Schließen';
 
+  /// Alternativen: removes a „Probiere ich" choice.
+  static const String forget = 'Nicht mehr merken';
+
+  /// After a meal: opens the Alternativen.
+  static const String viewAlternatives = 'Alternativen ansehen ›';
+
   /// The Buddy's hero line while the card waits below.
   static const String cueLine =
       'Magst du kurz auf deinen Tag schauen? Er wartet gleich unter mir. 🌙';
 
-  static String notificationBody(String? buddyName) =>
-      (buddyName == null || buddyName.trim().isEmpty)
-      ? '🌙 Dein Tagesrückblick ist da.'
-      : '🌙 $buddyName hat auf deinen Tag geschaut. '
-            'Dein Tagesrückblick ist da.';
+  static String notificationBody(String? buddyName) {
+    final name = buddyName?.trim() ?? '';
+    return name.isEmpty
+        ? '🌙 Dein Tagesrückblick ist da.'
+        : '🌙 $name hat auf deinen Tag geschaut. Dein Tagesrückblick ist da.';
+  }
 }

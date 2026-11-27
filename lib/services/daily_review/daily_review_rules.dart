@@ -157,6 +157,7 @@ class DailyReview {
     required this.alternative,
     required this.alternativeLocked,
     required this.extras,
+    this.alternativePending = false,
   });
 
   final ReviewDay day;
@@ -165,11 +166,16 @@ class DailyReview {
   final AlternativePick? alternative;
   final bool alternativeLocked;
   final List<DailyReviewLine> extras;
+
+  /// The suggestions or the choices are still on their first load: no
+  /// [alternative] yet, and the card shows no alternative block (neither a
+  /// claim of none nor a pick it may have to take back).
+  final bool alternativePending;
 }
 
 /// Null without a meal on that day. [DailyReview.lastGut] is the level of the
 /// day's latest gut-feeling entry by trackedAt. [alternativeLocked] keeps the
-/// pick (the card hides its names).
+/// pick (the card hides its names). [alternativePending]: no pick yet.
 DailyReview? buildDailyReview({
   required ReviewDay day,
   required List<MealEntry> meals,
@@ -177,6 +183,7 @@ DailyReview? buildDailyReview({
   required List<IngredientSuggestionGroup> groups,
   required Set<(String, String)> chosen,
   bool alternativeLocked = false,
+  bool alternativePending = false,
   List<DailyReviewLine> extras = const [],
 }) {
   final dayMeals = meals.where((m) => onWallClockDay(m.trackedAt, day.day));
@@ -190,13 +197,16 @@ DailyReview? buildDailyReview({
     day: day,
     meals: dayMeals.length,
     lastGut: latest == null ? null : calculateGutFeelingRating(latest).level,
-    alternative: pickAlternative(
-      groups: groups,
-      dayMealIds: {for (final m in dayMeals) m.id},
-      chosen: chosen,
-      day: day.day,
-    ),
+    alternative: alternativePending
+        ? null
+        : pickAlternative(
+            groups: groups,
+            dayMealIds: {for (final m in dayMeals) m.id},
+            chosen: chosen,
+            day: day.day,
+          ),
     alternativeLocked: alternativeLocked,
+    alternativePending: alternativePending,
     extras: extras,
   );
 }

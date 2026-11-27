@@ -1,4 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -7,20 +9,26 @@ import 'package:riverpod/src/internals.dart' show Override;
 
 import 'package:belly_buddy/models/alternative_choice.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/plus_status.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/providers/alternative_choices_provider.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/daily_review_provider.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
+import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/daily_review_card.dart';
 import 'package:belly_buddy/services/alternative_choice_service.dart';
 import 'package:belly_buddy/services/daily_review/daily_review_copy.dart';
 import 'package:belly_buddy/services/daily_review/daily_review_rules.dart';
 import 'package:belly_buddy/utils/gut_feeling_rating.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 
 import '../../../helpers/app_host.dart';
 import '../../../helpers/fixtures.dart';
+import '../../../helpers/purchases_fakes.dart';
+import '../../../helpers/riverpod_helpers.dart';
 
 final _day = DateTime(2026, 11, 27);
 
@@ -37,7 +45,9 @@ IngredientSuggestionGroup _zwiebel({int recent = 3}) =>
           MealDetail(
             id: i == 0 ? 'm1' : 'old-$i',
             title: 'Mahlzeit $i',
-            trackedAt: DateTime.utc(2026, 11, 27 - i, 12),
+            trackedAt: wallClockFromWire(
+              DateTime.utc(2026, 11, 27 - i, 12).toIso8601String(),
+            ),
           ),
       ],
       replacements: const [
@@ -51,6 +61,9 @@ class _Service implements AlternativeChoiceService {
   bool fail = false;
   final calls = <(String, String, AlternativeChoiceKind)>[];
 
+  /// While set, [upsert] answers only once it completes.
+  Completer<void>? gate;
+
   @override
   Future<List<Map<String, dynamic>>> fetch(String userId) async => const [];
 
@@ -62,6 +75,7 @@ class _Service implements AlternativeChoiceService {
     required AlternativeChoiceKind kind,
   }) async {
     calls.add((ingredientId, replacementId, kind));
+    await gate?.future;
     if (fail) throw Exception('offline');
     return {
       'id': 'c-${calls.length}',
@@ -106,19 +120,36 @@ class _Harness {
     this.yesterday = false,
     this.meals = 3,
     this.lastGut,
-    this.groups,
+    List<IngredientSuggestionGroup>? groups,
     this.locked = false,
     this.upsellRoute,
     this.extras = const [],
-  });
+    this.pending = false,
+    this.plus,
+  }) : groupsProvider =
+           NotifierProvider<
+             Switchable<List<IngredientSuggestionGroup>>,
+             List<IngredientSuggestionGroup>
+           >(() => Switchable(groups ?? [_zwiebel()]));
 
   final bool yesterday;
   final int meals;
   final GutFeelingRatingLevel? lastGut;
-  final List<IngredientSuggestionGroup>? groups;
   final bool locked;
   final String? upsellRoute;
   final List<DailyReviewLine> extras;
+  final bool pending;
+
+  /// With a Plus answer, the real seams decide (Plus switch on, store
+  /// available): [locked] and [upsellRoute] are not used.
+  final Future<PlusStatus> Function()? plus;
+
+  /// The suggestion groups the review picks from; switchable.
+  final NotifierProvider<
+    Switchable<List<IngredientSuggestionGroup>>,
+    List<IngredientSuggestionGroup>
+  >
+  groupsProvider;
 
   final service = _Service();
   final suggestions = _Suggestions();
@@ -132,20 +163,30 @@ class _Harness {
     alternativeChoiceServiceProvider.overrideWithValue(service),
     ingredientSuggestionProvider.overrideWith(() => suggestions),
     dailyReviewClosedProvider.overrideWith(() => closed),
-    dailyReviewUpsellRouteProvider.overrideWithValue(upsellRoute),
+    if (plus case final answer?) ...[
+      paywallEnabledProvider.overrideWithValue(true),
+      purchasesGatewayProvider.overrideWithValue(FakePurchasesGateway()),
+      plusProvider.overrideWith(() => FakePlusNotifier(answer)),
+    ] else
+      dailyReviewUpsellRouteProvider.overrideWithValue(upsellRoute),
     dailyReviewProvider.overrideWith((ref) {
       final day = ReviewDay(_day, yesterday: yesterday);
       return DailyReview(
         day: day,
         meals: meals,
         lastGut: lastGut,
-        alternative: pickAlternative(
-          groups: groups ?? [_zwiebel()],
-          dayMealIds: const {'m1'},
-          chosen: ref.watch(chosenAlternativesProvider),
-          day: _day,
-        ),
-        alternativeLocked: locked,
+        alternative: pending
+            ? null
+            : pickAlternative(
+                groups: ref.watch(groupsProvider),
+                dayMealIds: const {'m1'},
+                chosen: ref.watch(chosenAlternativesProvider),
+                day: _day,
+              ),
+        alternativeLocked: plus == null
+            ? locked
+            : ref.watch(dailyReviewAlternativeLockedProvider),
+        alternativePending: pending,
         extras: extras,
       );
     }),
@@ -186,6 +227,13 @@ class _Harness {
 
   String get location =>
       router.routerDelegate.currentConfiguration.last.matchedLocation;
+
+  void setGroups(WidgetTester tester, List<IngredientSuggestionGroup> groups) {
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(DailyReviewCard)),
+    );
+    container.read(groupsProvider.notifier).set(groups);
+  }
 }
 
 /// The vertical position of [text]'s top.
@@ -424,6 +472,148 @@ void main() {
       await tester.tap(find.byKey(DailyReviewCard.upsellKey));
       await tester.pumpAndSettle();
       expect(h.location, RoutePaths.plus);
+    });
+
+    testWidgets('locked, yesterday: „Für heute hätte ich eine Alternative für '
+        'dich."', (tester) async {
+      final h = _Harness(yesterday: true, locked: true);
+      await h.pump(tester);
+
+      expect(
+        find.text('Für heute hätte ich eine Alternative für dich.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Für morgen'), findsNothing);
+    });
+
+    testWidgets('locked without a pick (no analysis without Plus): the Plus '
+        'line, „Mehr erfahren" opens the upsell', (tester) async {
+      final h = _Harness(
+        groups: const [],
+        locked: true,
+        upsellRoute: RoutePaths.plus,
+      );
+      await h.pump(tester);
+
+      expect(
+        find.text(
+          'Mit Belly Buddy Plus schaue ich jeden Abend nach einer '
+          'Alternative für dich.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(DailyReviewCopy.none(yesterday: false)), findsNothing);
+      expect(find.byKey(DailyReviewCard.tryKey), findsNothing);
+      await tester.tap(find.byKey(DailyReviewCard.upsellKey));
+      await tester.pumpAndSettle();
+      expect(h.location, RoutePaths.plus);
+    });
+
+    testWidgets('locked without a pick and no upsell route: the Plus line, no '
+        'button', (tester) async {
+      final h = _Harness(groups: const [], locked: true);
+      await h.pump(tester);
+
+      expect(find.text(DailyReviewCopy.lockedNoPick), findsOneWidget);
+      expect(find.byKey(DailyReviewCard.upsellKey), findsNothing);
+    });
+
+    testWidgets('the alternative still loading: no alternative block at all', (
+      tester,
+    ) async {
+      for (final locked in [false, true]) {
+        final h = _Harness(pending: true, locked: locked);
+        await h.pump(tester);
+
+        expect(find.byKey(DailyReviewCard.cardKey), findsOneWidget);
+        expect(find.textContaining('Alternative'), findsNothing);
+        expect(find.textContaining('Statt'), findsNothing);
+        expect(find.byKey(DailyReviewCard.tryKey), findsNothing);
+        expect(find.byKey(DailyReviewCard.upsellKey), findsNothing);
+      }
+    });
+
+    testWidgets('the neutral line switches to the alternative once groups '
+        'arrive', (tester) async {
+      final h = _Harness(groups: const []);
+      await h.pump(tester);
+      expect(find.text(DailyReviewCopy.none(yesterday: false)), findsOneWidget);
+
+      h.setGroups(tester, [_zwiebel()]);
+      await tester.pump();
+
+      expect(find.text(DailyReviewCopy.none(yesterday: false)), findsNothing);
+      expect(
+        find.text('Statt Zwiebel könntest du morgen Lauchgrün probieren.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(DailyReviewCard.tryKey), findsOneWidget);
+    });
+
+    testWidgets('while a choice saves: both buttons off, a second tap stores '
+        'nothing more', (tester) async {
+      final h = _Harness()..service.gate = Completer<void>();
+      await h.pump(tester);
+
+      await tester.tap(find.byKey(DailyReviewCard.tryKey));
+      await tester.pump();
+      expect(h.service.calls, hasLength(1));
+      expect(
+        tester
+            .widget<TextButton>(find.byKey(DailyReviewCard.skipKey))
+            .onPressed,
+        isNull,
+      );
+      // The line being saved stays while the provider moved on.
+      expect(
+        find.text('Statt Zwiebel könntest du morgen Lauchgrün probieren.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(DailyReviewCard.tryKey), warnIfMissed: false);
+      await tester.tap(
+        find.byKey(DailyReviewCard.skipKey),
+        warnIfMissed: false,
+      );
+      await tester.pump();
+      expect(h.service.calls, hasLength(1));
+
+      h.service.gate!.complete();
+      await tester.pump();
+      await tester.pump();
+      expect(find.text(DailyReviewCopy.saved), findsOneWidget);
+      expect(h.service.calls, hasLength(1));
+    });
+
+    testWidgets('real seams: Plus switch on, status none → locked, no names, '
+        '„Mehr erfahren" → /plus', (tester) async {
+      final h = _Harness(plus: () async => PlusStatus.none);
+      await h.pump(tester);
+      await tester.pump();
+
+      expect(
+        find.text(DailyReviewCopy.locked(yesterday: false)),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Zwiebel'), findsNothing);
+      expect(find.textContaining('Lauchgrün'), findsNothing);
+      await tester.tap(find.byKey(DailyReviewCard.upsellKey));
+      await tester.pumpAndSettle();
+      expect(h.location, RoutePaths.plus);
+    });
+
+    testWidgets('real seams: Plus status still loading → open (names, buttons, '
+        'no upsell)', (tester) async {
+      final h = _Harness(plus: () => Completer<PlusStatus>().future);
+      await h.pump(tester);
+      await tester.pump();
+
+      expect(
+        find.text('Statt Zwiebel könntest du morgen Lauchgrün probieren.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(DailyReviewCard.tryKey), findsOneWidget);
+      expect(find.byKey(DailyReviewCard.upsellKey), findsNothing);
     });
 
     testWidgets('× closes for that day', (tester) async {

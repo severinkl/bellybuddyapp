@@ -31,7 +31,7 @@ class TriedAlternativesSection extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Probiere ich',
+            DailyReviewCopy.tryIt,
             style: TextStyle(
               fontSize: AppTheme.fontSizeSubtitle,
               fontWeight: FontWeight.w600,
@@ -59,7 +59,7 @@ class TriedAlternativesSection extends ConsumerWidget {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
-                        tooltip: 'Nicht mehr merken',
+                        tooltip: DailyReviewCopy.forget,
                         onPressed: () async {
                           final messenger = ScaffoldMessenger.of(context);
                           final ok = await ref

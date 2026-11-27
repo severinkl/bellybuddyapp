@@ -52,7 +52,9 @@ String _saidKey(String userId) =>
 /// Preferences that can't be read or written are logged; the day then
 /// lives in memory only.
 class DailyReviewClosedNotifier extends AsyncNotifier<DateTime?> {
-  /// The writes, one after another, so an older one never lands last.
+  /// The writes of this notifier instance, one after another, so an older
+  /// one never lands after a newer one. Orders writes within one instance
+  /// only; `build` waits for this instance's chain before it reads.
   Future<void> _writes = Future.value();
 
   @override
@@ -111,10 +113,14 @@ final openReviewDayProvider = Provider<ReviewDay?>((ref) {
   );
 });
 
+/// Neither a value nor an error yet.
+bool _firstLoad(AsyncValue<Object?> v) => !v.hasValue && !v.hasError;
+
 /// The open review built from that day's entries: [entriesProvider] while
 /// it holds that day (today: only then); otherwise, for yesterday,
-/// `diaryEntriesProvider(day)`. With the suggestion groups (none while
-/// loading or failed), the user's choices and the seams. Null while not
+/// `diaryEntriesProvider(day)`. With the suggestion groups (none if
+/// failed), the user's choices (none if failed) and the seams; no pick
+/// while either is on its first load ([DailyReview.alternativePending]). Null while not
 /// open, signed out, during the Buddy onboarding, while the day's entries
 /// are not there, or without a meal that day.
 final dailyReviewProvider = Provider<DailyReview?>((ref) {
@@ -145,13 +151,18 @@ final dailyReviewProvider = Provider<DailyReview?>((ref) {
     return null;
   }
 
+  final suggestions = ref.watch(ingredientSuggestionProvider);
+  final choicesLoading = ref.watch(
+    alternativeChoicesProvider.select(_firstLoad),
+  );
   return buildDailyReview(
     day: day,
     meals: meals,
     gutFeelings: gutFeelings,
-    groups: ref.watch(ingredientSuggestionProvider).value ?? const [],
+    groups: suggestions.value ?? const [],
     chosen: ref.watch(chosenAlternativesProvider),
     alternativeLocked: ref.watch(dailyReviewAlternativeLockedProvider),
+    alternativePending: _firstLoad(suggestions) || choicesLoading,
     extras: ref.watch(dailyReviewExtrasProvider),
   );
 });

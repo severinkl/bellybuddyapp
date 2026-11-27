@@ -69,6 +69,56 @@ void main() {
       DailyReviewCopy.notificationBody('Bobo'),
       '🌙 Bobo hat auf deinen Tag geschaut. Dein Tagesrückblick ist da.',
     );
+    expect(
+      DailyReviewCopy.notificationBody('  Bobo '),
+      '🌙 Bobo hat auf deinen Tag geschaut. Dein Tagesrückblick ist da.',
+    );
+    expect(
+      DailyReviewCopy.notificationBody('   '),
+      '🌙 Dein Tagesrückblick ist da.',
+    );
+  });
+
+  test('locked: „morgen" today, „heute" for yesterday; without a pick the '
+      'Plus line', () {
+    expect(
+      DailyReviewCopy.locked(yesterday: false),
+      'Für morgen hätte ich eine Alternative für dich.',
+    );
+    expect(
+      DailyReviewCopy.locked(yesterday: true),
+      'Für heute hätte ich eine Alternative für dich.',
+    );
+    expect(
+      DailyReviewCopy.lockedNoPick,
+      'Mit Belly Buddy Plus schaue ich jeden Abend nach einer Alternative '
+      'für dich.',
+    );
+  });
+
+  test('the fixed lines, exact', () {
+    expect(DailyReviewCopy.gutHard, 'Ich bin für dich da. 💛');
+    expect(DailyReviewCopy.gutAsk, 'Magst du noch dein Bauchgefühl eintragen?');
+    expect(DailyReviewCopy.gutAskButton, 'Bauchgefühl eintragen');
+    expect(DailyReviewCopy.tryIt, 'Probiere ich');
+    expect(DailyReviewCopy.skip, 'Passt nicht für mich');
+    expect(
+      DailyReviewCopy.saved,
+      'Gemerkt! Du findest es unter Entdecken › Alternativen.',
+    );
+    expect(DailyReviewCopy.savedOpen, 'Ansehen');
+    expect(DailyReviewCopy.upsell, 'Mehr erfahren');
+    expect(
+      DailyReviewCopy.failed,
+      'Das hat nicht geklappt. Versuch es später noch einmal.',
+    );
+    expect(DailyReviewCopy.close, 'Schließen');
+    expect(
+      DailyReviewCopy.cueLine,
+      'Magst du kurz auf deinen Tag schauen? Er wartet gleich unter mir. 🌙',
+    );
+    expect(DailyReviewCopy.forget, 'Nicht mehr merken');
+    expect(DailyReviewCopy.viewAlternatives, 'Alternativen ansehen ›');
   });
 
   test('no string contains solltest, wegen, Diagnose, Auslöser, zu viel', () {
@@ -78,6 +128,7 @@ void main() {
         for (final n in [1, 3]) DailyReviewCopy.meals(n, yesterday: y),
         DailyReviewCopy.alternative('Zwiebel', 'Lauch', yesterday: y),
         DailyReviewCopy.none(yesterday: y),
+        DailyReviewCopy.locked(yesterday: y),
       ],
       for (final l in GutFeelingRatingLevel.values) DailyReviewCopy.gut(l),
       DailyReviewCopy.recent('Zwiebel', 3),
@@ -90,11 +141,13 @@ void main() {
       DailyReviewCopy.skip,
       DailyReviewCopy.saved,
       DailyReviewCopy.savedOpen,
-      DailyReviewCopy.locked,
+      DailyReviewCopy.lockedNoPick,
       DailyReviewCopy.upsell,
       DailyReviewCopy.failed,
       DailyReviewCopy.close,
       DailyReviewCopy.cueLine,
+      DailyReviewCopy.forget,
+      DailyReviewCopy.viewAlternatives,
     ];
     for (final s in strings) {
       for (final w in [
