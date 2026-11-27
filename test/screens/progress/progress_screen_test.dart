@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +12,8 @@ import 'package:belly_buddy/providers/progress_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/progress/progress_screen.dart';
+import 'package:belly_buddy/screens/progress/widgets/symptom_trend.dart';
+import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 import 'package:belly_buddy/services/progress/progress_engine.dart';
 
 import '../../helpers/app_host.dart';
@@ -77,8 +81,14 @@ class _FakeProgressNotifier extends ProgressNotifier {
   final Object? error;
   int refreshes = 0;
 
+  /// While set, a (re)build waits for it; completing it with an error fails
+  /// that build.
+  Completer<void>? gate;
+
   @override
   Future<Progress?> build() async {
+    ref.watch(_userChange);
+    await gate?.future;
     if (error case final e?) throw e;
     return value;
   }
@@ -87,14 +97,30 @@ class _FakeProgressNotifier extends ProgressNotifier {
   Future<void> refresh() async => refreshes++;
 }
 
+class _Counter extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
+/// What the fake watches: bumping it rebuilds the notifier as a user change
+/// does (a reload, with the previous value).
+final _userChange = NotifierProvider<_Counter, int>(_Counter.new);
+
+/// How the Buddy status behaves in [pump].
+enum _Buddy { loaded, loading, failed }
+
 void main() {
   late GoRouter router;
+  late ProviderContainer container;
 
   Future<_FakeProgressNotifier> pump(
     WidgetTester tester, {
     Progress? progress,
     Object? error,
     int streak = 5,
+    _Buddy buddy = _Buddy.loaded,
     Size size = const Size(400, 900),
     double textScale = 1,
   }) async {
@@ -103,11 +129,17 @@ void main() {
       ..devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final notifier = _FakeProgressNotifier(progress, error: error);
-    final container = ProviderContainer.test(
+    container = ProviderContainer.test(
       overrides: [
         progressProvider.overrideWith(() => notifier),
         buddyProvider.overrideWith(
-          () => FakeBuddyNotifier(() => buddyStatus(streak: streak)),
+          () => FakeBuddyNotifier(
+            () => switch (buddy) {
+              _Buddy.loaded => buddyStatus(streak: streak),
+              _Buddy.loading => Completer<BuddyStatus?>().future,
+              _Buddy.failed => throw Exception('buddy down'),
+            },
+          ),
         ),
         buddyClockProvider.overrideWithValue(() => _now),
       ],
@@ -257,38 +289,6 @@ void main() {
     );
   });
 
-  testWidgets('error shows retry, retry calls refresh', (tester) async {
-    final notifier = await pump(tester, error: Exception('down'));
-
-    expect(
-      find.text('Dein Verlauf konnte nicht geladen werden.'),
-      findsOneWidget,
-    );
-    await tester.tap(find.text('Nochmal versuchen'));
-    await tester.pump();
-
-    expect(notifier.refreshes, 1);
-  });
-
-  testWidgets('pull to refresh calls refresh', (tester) async {
-    final notifier = await pump(tester, progress: _full());
-
-    await tester.fling(
-      find.text('Die letzten 12 Wochen'),
-      const Offset(0, 400),
-      1000,
-    );
-    await tester.pumpAndSettle();
-
-    expect(notifier.refreshes, 1);
-  });
-
-  testWidgets('future days have no cell semantics', (tester) async {
-    final handle = tester.ensureSemantics();
-    await pump(tester, progress: _full(), size: const Size(400, 4000));
-
-    expect(find.bySemanticsLabel('24. Nov: schwer'), findsOneWidget);
-    expect(find.bySemanticsLabel('26. Nov: kein Eintrag'), findsOneWidget);
   testWidgets('no current streak tile while the Buddy has no value', (
     tester,
   ) async {
@@ -348,6 +348,38 @@ void main() {
     expect(find.textContaining('zeige ich dir, sobald'), findsNothing);
   });
 
+  testWidgets('error shows retry, retry calls refresh', (tester) async {
+    final notifier = await pump(tester, error: Exception('down'));
+
+    expect(
+      find.text('Dein Verlauf konnte nicht geladen werden.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Nochmal versuchen'));
+    await tester.pump();
+
+    expect(notifier.refreshes, 1);
+  });
+
+  testWidgets('pull to refresh calls refresh', (tester) async {
+    final notifier = await pump(tester, progress: _full());
+
+    await tester.fling(
+      find.text('Die letzten 12 Wochen'),
+      const Offset(0, 400),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(notifier.refreshes, 1);
+  });
+
+  testWidgets('future days have no cell semantics', (tester) async {
+    final handle = tester.ensureSemantics();
+    await pump(tester, progress: _full(), size: const Size(400, 4000));
+
+    expect(find.bySemanticsLabel('24. Nov: schwer'), findsOneWidget);
+    expect(find.bySemanticsLabel('26. Nov: kein Eintrag'), findsOneWidget);
     for (final day in [27, 28, 29]) {
       expect(find.bySemanticsLabel(RegExp('^$day\\. Nov')), findsNothing);
     }

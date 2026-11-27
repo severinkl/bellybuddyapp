@@ -21,8 +21,9 @@ class ProgressSummary extends StatelessWidget {
 
   final Progress progress;
 
-  /// The Buddy's streak, the same number as Home's.
-  final int currentStreak;
+  /// The Buddy's streak, the same number as Home's; null while the Buddy
+  /// loads or failed (the tile is then left out, never shown as 0).
+  final int? currentStreak;
 
   @override
   Widget build(BuildContext context) {
@@ -72,17 +73,18 @@ class ProgressSummary extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: AppConstants.spacingSm,
             children: [
-              Expanded(
-                child: _StreakTile(
-                  label: ProgressCopy.currentStreak,
-                  days: currentStreak,
+              if (currentStreak case final current?)
+                Expanded(
+                  child: _StreakTile(
+                    label: ProgressCopy.currentStreak,
+                    days: current,
+                  ),
                 ),
-              ),
               Expanded(
                 child: _StreakTile(
                   label: ProgressCopy.longestStreak,
                   // A run longer than the window shows as the current one.
-                  days: math.max(p.longestStreak, currentStreak),
+                  days: math.max(p.longestStreak, currentStreak ?? 0),
                   sub: ProgressCopy.longestSub,
                 ),
               ),

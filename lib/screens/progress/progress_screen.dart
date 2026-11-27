@@ -66,8 +66,8 @@ class ProgressScreen extends ConsumerWidget {
               ? const [_Empty()]
               : _page(
                   progress,
-                  // The Buddy's streak, as on Home (none while it loads).
-                  currentStreak: ref.watch(buddyProvider).value?.streak ?? 0,
+                  // The Buddy's streak, as on Home (null while it loads or fails).
+                  currentStreak: ref.watch(buddyProvider).value?.streak,
                   today: ref.read(buddyClockProvider)(),
                 ),
         ),
@@ -89,7 +89,7 @@ class ProgressScreen extends ConsumerWidget {
 
   static List<Widget> _page(
     Progress progress, {
-    required int currentStreak,
+    required int? currentStreak,
     required DateTime today,
   }) => [
     ProgressSummary(progress: progress, currentStreak: currentStreak),
