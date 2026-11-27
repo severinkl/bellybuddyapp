@@ -609,6 +609,32 @@ void main() {
         expect(offer, findsNothing);
       });
 
+      for (final scale in [1.0, 1.3]) {
+        testWidgets('fits 375×667 at text scale $scale with the offer', (
+          tester,
+        ) async {
+          tester.view.physicalSize = const Size(750, 1334);
+          tester.view.devicePixelRatio = 2;
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.view.reset);
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+          final errors = await collectFlutterErrors(() async {
+            await pumpRouted(tester);
+            await tapMascot(tester, AppConstants.mascotCramp);
+            await goToStimmungAndSave(tester);
+            await pumpPastCharge(tester);
+          });
+
+          expect(offer, findsOneWidget);
+          expectSuccessPageFits(
+            tester,
+            errors,
+            page: find.byType(BbSuccessOverlay),
+          );
+        });
+      }
+
       // At text scale 2 the wrapped offer leaves the Buddy too little room
       // on smaller phones (iPhone 17: 12 px); the largest phone fits.
       testWidgets('fits 440×956 at text scale 2 with the offer', (
