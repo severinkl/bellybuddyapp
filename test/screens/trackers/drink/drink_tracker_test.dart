@@ -356,7 +356,9 @@ void main() {
     testWidgets('a user without drink history sees „Häufige Getränke"', (
       tester,
     ) async {
-      final repo = FakeDrinkRepository()..recentDrinkIds = [];
+      final repo = FakeDrinkRepository()
+        ..recentDrinkIds = []
+        ..lastEntry = null;
       await tester.pumpWithProviders(
         const DrinkTrackerScreen(),
         overrides: _overrides(drinkRepo: repo),

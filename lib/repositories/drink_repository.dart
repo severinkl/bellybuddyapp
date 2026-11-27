@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/drink.dart';
+import '../models/drink_entry.dart';
 import '../services/drink_service.dart';
 
 class DrinkRepository {
@@ -13,6 +14,9 @@ class DrinkRepository {
 
   Future<List<String>> fetchRecentDrinkIds(String userId) =>
       _drinkService.fetchRecentDrinkIds(userId);
+
+  Future<DrinkEntry?> fetchLastEntry(String userId) =>
+      _drinkService.fetchLastEntry(userId);
 
   Future<Drink> insertDrink(String name, {required String userId}) =>
       _drinkService.insertDrink(name, userId: userId);

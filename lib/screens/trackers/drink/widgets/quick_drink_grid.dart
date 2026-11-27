@@ -18,15 +18,15 @@ class QuickDrinkGrid extends ConsumerWidget {
     final selectedDrink = ref.watch(
       drinkTrackerProvider.select((s) => s.selectedDrink),
     );
-    final hasRecentDrinks = ref.watch(
-      drinkTrackerProvider.select((s) => s.hasRecentDrinks),
+    final hasLastDrink = ref.watch(
+      drinkTrackerProvider.select((s) => s.lastDrink != null),
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          hasRecentDrinks
+          hasLastDrink
               ? 'Wähle aus deinen letzten Getränken'
               : 'Häufige Getränke',
           style: const TextStyle(

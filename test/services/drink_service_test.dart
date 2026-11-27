@@ -202,6 +202,63 @@ void main() {
     });
   });
 
+  group('DrinkService.fetchLastEntry', () {
+    Map<String, dynamic> row() => {
+      'id': 'e-1',
+      'user_id': testUserId,
+      'tracked_at': '2026-11-26T20:00:00+00:00',
+      'drink_id': 'water-id',
+      'amount_ml': 250,
+      'drinks': {'name': 'Wasser'},
+    };
+
+    MockPostgrestFilterBuilder stub(Map<String, dynamic>? result) {
+      final fb = mockSelect(client, table: 'drink_entries');
+      when(() => fb.eq(any(), any())).thenAnswer((_) => fb);
+      when(
+        () => fb.order(any(), ascending: any(named: 'ascending')),
+      ).thenAnswer((_) => fb);
+      when(() => fb.limit(any())).thenAnswer((_) => fb);
+      when(() => fb.maybeSingle()).thenAnswer((_) => settleMaybeSingle(result));
+      return fb;
+    }
+
+    test('reads the newest entry by tracked_at, then created_at, for the user, '
+        'with the drink name', () async {
+      final fb = stub(row());
+
+      await service.fetchLastEntry(testUserId);
+
+      verifyInOrder([
+        () => fb.eq('user_id', testUserId),
+        () => fb.order('tracked_at', ascending: false),
+        () => fb.order('created_at', ascending: false),
+        () => fb.limit(1),
+        () => fb.maybeSingle(),
+      ]);
+    });
+
+    test(
+      'returns the row as a DrinkEntry with its wall-clock tracked_at',
+      () async {
+        stub(row());
+
+        final entry = await service.fetchLastEntry(testUserId);
+
+        expect(entry!.drinkId, 'water-id');
+        expect(entry.drinkName, 'Wasser');
+        expect(entry.amountMl, 250);
+        expect(entry.trackedAt, DateTime(2026, 11, 26, 20));
+      },
+    );
+
+    test('returns null without entries', () async {
+      stub(null);
+
+      expect(await service.fetchLastEntry(testUserId), isNull);
+    });
+  });
+
   group('DrinkService.insertDrink', () {
     test('inserts drink with name and userId, returns Drink', () async {
       final queryBuilder = MockSupabaseQueryBuilder();

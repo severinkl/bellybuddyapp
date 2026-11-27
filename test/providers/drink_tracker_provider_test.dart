@@ -2,10 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/models/drink.dart';
+import 'package:belly_buddy/models/drink_entry.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/drink_tracker_provider.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
@@ -20,6 +23,9 @@ void main() {
     mockEntryRepo = MockEntryRepository();
     registerFallbackValue(testDrink());
     registerFallbackValue(testDrinkEntry());
+    when(
+      () => mockDrinkRepo.fetchLastEntry(any()),
+    ).thenAnswer((_) async => null);
   });
 
   ProviderContainer makeContainer({String? userId = testUserId}) =>
@@ -30,6 +36,16 @@ void main() {
           currentUserIdProvider.overrideWithValue(userId),
         ],
       );
+
+  void stubLoad(List<Drink> drinks, {DrinkEntry? lastEntry}) {
+    when(() => mockDrinkRepo.fetchAll()).thenAnswer((_) async => drinks);
+    when(
+      () => mockDrinkRepo.fetchRecentDrinkIds(any()),
+    ).thenAnswer((_) async => []);
+    when(
+      () => mockDrinkRepo.fetchLastEntry(any()),
+    ).thenAnswer((_) async => lastEntry);
+  }
 
   group('DrinkTrackerNotifier.loadDrinks', () {
     test('populates allDrinks and quickDrinks', () async {
@@ -45,21 +61,58 @@ void main() {
       final state = container.read(drinkTrackerProvider);
       expect(state.allDrinks, hasLength(1));
       expect(state.isLoading, isFalse);
-      expect(state.hasRecentDrinks, isFalse);
     });
 
-    test('knows when the user has logged drinks before', () async {
-      final drinks = [testDrink(id: 'd-1', name: 'Wasser')];
-      when(() => mockDrinkRepo.fetchAll()).thenAnswer((_) async => drinks);
-      when(
-        () => mockDrinkRepo.fetchRecentDrinkIds(any()),
-      ).thenAnswer((_) async => ['d-1']);
+    test('resolves the last entry to its drink and amount', () async {
+      final tee = testDrink(id: 'tee-id', name: 'Tee');
+      stubLoad([
+        tee,
+      ], lastEntry: testDrinkEntry(drinkId: 'tee-id', amountMl: 400));
 
       final container = makeContainer();
       await container.read(drinkTrackerProvider.notifier).loadDrinks();
 
-      expect(container.read(drinkTrackerProvider).hasRecentDrinks, isTrue);
+      expect(container.read(drinkTrackerProvider).lastDrink, (
+        drink: tee,
+        amountMl: 400,
+      ));
     });
+
+    test('a last entry whose drink is unknown shows no row', () async {
+      stubLoad([testDrink()], lastEntry: testDrinkEntry(drinkId: 'gone'));
+
+      final container = makeContainer();
+      await container.read(drinkTrackerProvider.notifier).loadDrinks();
+
+      expect(container.read(drinkTrackerProvider).lastDrink, isNull);
+    });
+
+    test('no last entry means no row', () async {
+      stubLoad([testDrink()]);
+
+      final container = makeContainer();
+      await container.read(drinkTrackerProvider.notifier).loadDrinks();
+
+      expect(container.read(drinkTrackerProvider).lastDrink, isNull);
+    });
+
+    test(
+      'a failing last-entry fetch leaves lastDrink null and loads the rest',
+      () async {
+        stubLoad([testDrink()]);
+        when(
+          () => mockDrinkRepo.fetchLastEntry(any()),
+        ).thenAnswer((_) async => throw Exception('db error'));
+
+        final container = makeContainer();
+        await container.read(drinkTrackerProvider.notifier).loadDrinks();
+
+        final state = container.read(drinkTrackerProvider);
+        expect(state.lastDrink, isNull);
+        expect(state.allDrinks, hasLength(1));
+        expect(state.isLoading, isFalse);
+      },
+    );
 
     test('sets isLoading false on error', () async {
       when(() => mockDrinkRepo.fetchAll()).thenThrow(Exception('db error'));
@@ -197,6 +250,123 @@ void main() {
       verifyNever(
         () => mockDrinkRepo.insertDrink(any(), userId: any(named: 'userId')),
       );
+    });
+  });
+
+  group('DrinkTrackerNotifier search and creating', () {
+    test('openSearch and closeSearch', () {
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier);
+
+      notifier.openSearch();
+      expect(container.read(drinkTrackerProvider).isSearchOpen, isTrue);
+      notifier.closeSearch();
+      expect(container.read(drinkTrackerProvider).isSearchOpen, isFalse);
+    });
+
+    test('picking a drink closes the search', () {
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier)
+        ..openSearch();
+
+      notifier.toggleDrink(testDrink());
+
+      expect(container.read(drinkTrackerProvider).isSearchOpen, isFalse);
+    });
+
+    test('creating a drink closes the search', () async {
+      when(
+        () => mockDrinkRepo.insertDrink(any(), userId: any(named: 'userId')),
+      ).thenAnswer((_) async => testDrink(id: 'new-1', name: 'Saft'));
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier)
+        ..openSearch();
+
+      await notifier.createDrink('Saft');
+
+      expect(container.read(drinkTrackerProvider).isSearchOpen, isFalse);
+    });
+
+    test(
+      'createDrink selects the new drink without reordering quickDrinks',
+      () async {
+        final wasser = testDrink();
+        stubLoad([wasser]);
+        final newDrink = testDrink(id: 'new-1', name: 'Saft');
+        when(
+          () => mockDrinkRepo.insertDrink(any(), userId: any(named: 'userId')),
+        ).thenAnswer((_) async => newDrink);
+        final container = makeContainer();
+        final notifier = container.read(drinkTrackerProvider.notifier);
+        await notifier.loadDrinks();
+        final before = container.read(drinkTrackerProvider).quickDrinks;
+
+        await notifier.createDrink('Saft');
+
+        final state = container.read(drinkTrackerProvider);
+        expect(state.quickDrinks, before);
+        expect(state.selectedDrink, newDrink);
+      },
+    );
+  });
+
+  group('DrinkTrackerNotifier.saveLast', () {
+    test(
+      'stores the last drink at the chosen time and shows success',
+      () async {
+        final tee = testDrink(id: 'tee-id', name: 'Tee');
+        stubLoad([
+          tee,
+        ], lastEntry: testDrinkEntry(drinkId: 'tee-id', amountMl: 400));
+        when(
+          () => mockEntryRepo.insertEntry(
+            any(),
+            any(),
+            userId: any(named: 'userId'),
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockDrinkRepo.fetchDayTotal(any(), any()),
+        ).thenAnswer((_) async => 400);
+        final container = makeContainer();
+        final notifier = container.read(drinkTrackerProvider.notifier);
+        await notifier.loadDrinks();
+        notifier.setTrackedAt(DateTime(2026, 11, 26, 20));
+
+        await notifier.saveLast();
+
+        final data =
+            verify(
+                  () => mockEntryRepo.insertEntry(
+                    any(),
+                    captureAny(),
+                    userId: testUserId,
+                  ),
+                ).captured.single
+                as Map<String, dynamic>;
+        expect(data['drink_id'], 'tee-id');
+        expect(data['amount_ml'], 400);
+        expect(data['tracked_at'], wallClockToWire(DateTime(2026, 11, 26, 20)));
+        expect(container.read(drinkTrackerProvider).showSuccess, isTrue);
+      },
+    );
+
+    test('without a last entry stores nothing', () async {
+      stubLoad([testDrink()]);
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier);
+      await notifier.loadDrinks();
+
+      await notifier.saveLast();
+
+      verifyNever(
+        () => mockEntryRepo.insertEntry(
+          any(),
+          any(),
+          userId: any(named: 'userId'),
+        ),
+      );
+      expect(container.read(drinkTrackerProvider).showSuccess, isFalse);
     });
   });
 

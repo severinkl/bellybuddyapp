@@ -7,6 +7,7 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/adapted_recipe.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
+import 'package:belly_buddy/models/drink_entry.dart';
 import 'package:belly_buddy/models/first_tip.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
@@ -482,6 +483,17 @@ class FakeDrinkRepository implements DrinkRepository {
   Future<int> fetchDayTotal(String userId, DateTime day) async {
     dayTotalFetches.add(day);
     return 500;
+  }
+
+  /// What [fetchLastEntry] returns; null: the user has no entries.
+  DrinkEntry? lastEntry = testDrinkEntry();
+
+  /// How often [fetchLastEntry] was called.
+  int lastEntryFetches = 0;
+  @override
+  Future<DrinkEntry?> fetchLastEntry(String userId) async {
+    lastEntryFetches++;
+    return lastEntry;
   }
 
   /// The day of every [fetchDayTotal] call, in order.
